@@ -3,6 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/admin/metric-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { 
   DollarSign, 
   Users, 
@@ -12,18 +21,35 @@ import {
   Trophy,
   Clock
 } from "lucide-react";
+import type { DailyStat, Offer, EndUser } from "@shared/schema";
+
+interface DashboardMetrics {
+  todayRevenue: number;
+  activeUsers: number;
+  conversionRate: number;
+  avgRevenue: number;
+}
 
 export default function Dashboard() {
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  const { data: metrics, isLoading: metricsLoading } = useQuery<DashboardMetrics>({
     queryKey: ['/api/dashboard/metrics'],
   });
 
-  const { data: topOffers, isLoading: offersLoading } = useQuery({
+  const { data: topOffers, isLoading: offersLoading } = useQuery<Offer[]>({
     queryKey: ['/api/dashboard/top-offers'],
   });
 
-  const { data: recentCompletions, isLoading: completionsLoading } = useQuery({
+  const { data: recentCompletions, isLoading: completionsLoading } = useQuery<EndUser[]>({
     queryKey: ['/api/dashboard/recent-completions'],
+  });
+
+  // Fetch last 30 days of data for revenue chart
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 30);
+  const endDate = new Date();
+  
+  const { data: chartData, isLoading: chartLoading } = useQuery<DailyStat[]>({
+    queryKey: ['/api/analytics/daily-stats', { startDate: startDate.toISOString(), endDate: endDate.toISOString() }],
   });
 
   if (metricsLoading) {
@@ -89,13 +115,77 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-72 bg-gradient-to-br from-primary/20 to-primary/5 rounded-md flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <ChartArea className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Chart Implementation Required</p>
-                <p className="text-xs opacity-75">Integrate with Recharts library</p>
+            {chartLoading ? (
+              <div className="h-72 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-sm text-muted-foreground">Loading chart data...</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData || []}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      className="text-xs fill-muted-foreground"
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return `${date.getMonth() + 1}/${date.getDate()}`;
+                      }}
+                    />
+                    <YAxis 
+                      className="text-xs fill-muted-foreground"
+                      tickFormatter={(value) => `$${value.toFixed(0)}`}
+                    />
+                    <Tooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const date = new Date(label);
+                          return (
+                            <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                              <p className="font-medium">{date.toLocaleDateString()}</p>
+                              <p className="text-green-600">
+                                Revenue: ${typeof payload[0]?.value === 'number' ? payload[0].value.toFixed(2) : '0.00'}
+                              </p>
+                              <p className="text-blue-600">
+                                Users: {payload[1]?.value || 0}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="totalRevenue" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="totalUsers" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ fill: 'hsl(var(--muted-foreground))', strokeWidth: 2, r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+                {(!chartData || chartData.length === 0) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                    <div className="text-center text-muted-foreground">
+                      <ChartArea className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No data available</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -116,7 +206,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {topOffers?.map((offer: any, index: number) => (
+                {topOffers?.map((offer, index: number) => (
                   <div 
                     key={offer.id} 
                     className="flex items-center justify-between p-3 bg-accent rounded-md"
@@ -187,7 +277,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentCompletions?.map((user: any) => (
+                  {recentCompletions?.map((user) => (
                     <tr 
                       key={user.id} 
                       className="border-b border-border hover:bg-muted/50"
@@ -204,7 +294,7 @@ export default function Dashboard() {
                         ${user.totalRevenue || '0.00'}
                       </td>
                       <td className="py-3 px-3 text-sm text-muted-foreground">
-                        {new Date(user.updatedAt).toLocaleString()}
+                        {user.updatedAt ? new Date(user.updatedAt).toLocaleString() : 'N/A'}
                       </td>
                       <td className="py-3 px-3">
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
