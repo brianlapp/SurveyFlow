@@ -89,6 +89,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/user/update-profile', async (req, res) => {
+    try {
+      // Security: Use sessionId instead of accepting endUserId from client
+      const { sessionId, firstName, lastName, birthMonth, birthDay, birthYear, gender, currentStep, address, city, state, zip, phone } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+
+      // Look up user by sessionId to prevent IDOR
+      const existingUser = await storage.getEndUserBySessionId(sessionId);
+      if (!existingUser) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Validate input using Zod schema
+      const updateSchema = z.object({
+        firstName: z.string().min(1).max(100).optional(),
+        lastName: z.string().min(1).max(100).optional(),
+        birthMonth: z.string().optional(),
+        birthDay: z.string().optional(), 
+        birthYear: z.string().optional(),
+        gender: z.enum(['male', 'female', 'other']).optional(),
+        address: z.string().max(500).optional(),
+        city: z.string().max(100).optional(),
+        state: z.string().max(50).optional(),
+        zip: z.string().max(20).optional(),
+        phone: z.string().max(20).optional(),
+        currentStep: z.number().min(1).max(3).optional(),
+      });
+
+      const validatedData = updateSchema.parse({
+        firstName, lastName, birthMonth, birthDay, birthYear, gender,
+        address, city, state, zip, phone, currentStep
+      });
+
+      const updateData: any = {
+        updatedAt: new Date()
+      };
+      
+      // Personal info
+      if (validatedData.firstName) updateData.firstName = validatedData.firstName;
+      if (validatedData.lastName) updateData.lastName = validatedData.lastName;
+      if (validatedData.gender) updateData.gender = validatedData.gender;
+      if (typeof validatedData.currentStep === 'number') updateData.currentQuestionIndex = validatedData.currentStep;
+      
+      // Address info
+      if (validatedData.address) updateData.address = validatedData.address;
+      if (validatedData.city) updateData.city = validatedData.city;
+      if (validatedData.state) updateData.state = validatedData.state;
+      if (validatedData.zip) updateData.zip = validatedData.zip;
+      if (validatedData.phone) updateData.phone = validatedData.phone;
+      
+      // Update age based on birth date if provided
+      if (validatedData.birthMonth && validatedData.birthDay && validatedData.birthYear) {
+        const birthDate = new Date(parseInt(validatedData.birthYear), parseInt(validatedData.birthMonth) - 1, parseInt(validatedData.birthDay));
+        const currentDate = new Date();
+        let age = currentDate.getFullYear() - birthDate.getFullYear();
+        const monthDiff = currentDate.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        updateData.age = age.toString();
+      }
+
+      const updatedUser = await storage.updateEndUser(existingUser.id, updateData);
+      res.json(updatedUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // Question routes
   app.get('/api/questions', async (req, res) => {
     try {
@@ -157,25 +233,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Survey response routes
   app.post('/api/user/response', async (req, res) => {
     try {
-      const responseData = insertResponseSchema.parse(req.body);
+      // Security: Use sessionId instead of accepting endUserId from client
+      const { sessionId, questionId, answer } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+
+      // Look up user by sessionId to prevent IDOR
+      const endUser = await storage.getEndUserBySessionId(sessionId);
+      if (!endUser) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Validate input using Zod schema
+      const responseSchema = z.object({
+        questionId: z.string().uuid("Invalid question ID"),
+        answer: z.any(), // Allow any answer type
+      });
+
+      const validatedData = responseSchema.parse({ questionId, answer });
+
+      // Verify question exists
+      const question = await storage.getQuestion(validatedData.questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+
+      const responseData = {
+        endUserId: endUser.id,
+        questionId: validatedData.questionId,
+        answer: validatedData.answer,
+      };
+      
       const response = await storage.createResponse(responseData);
       
       // Update user's current question index
-      const endUser = await storage.getEndUser(responseData.endUserId);
-      if (endUser) {
-        await storage.updateEndUser(responseData.endUserId, {
-          currentQuestionIndex: endUser.currentQuestionIndex + 1
-        });
-        
-        // Check if user should see offers on this page
-        const currentPage = Math.ceil((endUser.currentQuestionIndex + 1) / 1); // Assuming 1 question per page
-        const offers = await storage.getOffersByPage(currentPage);
-        
-        res.json({ response, offers });
-      } else {
-        res.json({ response, offers: [] });
-      }
+      await storage.updateEndUser(endUser.id, {
+        currentQuestionIndex: endUser.currentQuestionIndex + 1
+      });
+      
+      // Check if user should see offers on this page
+      const currentPage = Math.ceil((endUser.currentQuestionIndex + 1) / 1); // Assuming 1 question per page
+      const offers = await storage.getOffersByPage(currentPage);
+      
+      res.json({ response, offers });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
       console.error("Error creating response:", error);
       res.status(400).json({ message: "Invalid response data" });
     }
@@ -183,14 +289,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/complete', async (req, res) => {
     try {
-      const { endUserId } = req.body;
-      const endUser = await storage.updateEndUser(endUserId, {
+      // Security: Use sessionId instead of accepting endUserId from client
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+
+      // Look up user by sessionId to prevent IDOR
+      const existingUser = await storage.getEndUserBySessionId(sessionId);
+      if (!existingUser) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Validate input
+      if (existingUser.surveyCompleted) {
+        return res.status(400).json({ message: "Survey already completed" });
+      }
+
+      const endUser = await storage.updateEndUser(existingUser.id, {
         surveyCompleted: true
       });
       
       // Check if user has reached revenue threshold for postback
       const totalRevenue = parseFloat(endUser.totalRevenue?.toString() || '0');
-      await revenueTracker.checkAndFirePostback(endUserId, totalRevenue);
+      await revenueTracker.checkAndFirePostback(existingUser.id, totalRevenue);
       
       res.json(endUser);
     } catch (error) {
@@ -270,32 +393,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public offers endpoint for survey flow (minimal data)
+  app.get('/api/offers/public', async (req, res) => {
+    try {
+      const offers = await storage.getOffers(true); // Active offers only
+      
+      // Only return safe public fields for the survey
+      const publicOffers = offers.map(offer => ({
+        id: offer.id,
+        name: offer.name,
+        description: offer.description,
+        imageUrl: offer.imageUrl,
+        category: offer.category,
+        rating: offer.rating || 4.5,
+        originalPrice: offer.originalPrice || '$99.99',
+        discountPrice: offer.discountPrice || '$19.99',
+        // Exclude sensitive fields: payout, conversionUrl, etc.
+      }));
+      
+      res.json(publicOffers);
+    } catch (error) {
+      console.error("Error fetching public offers:", error);
+      res.status(500).json({ message: "Failed to fetch offers" });
+    }
+  });
+
   // Offer interaction routes (public)
   app.post('/api/offer/interact', async (req, res) => {
     try {
+      // Security: Use sessionId instead of accepting endUserId from client
+      const { sessionId, offerId, interactionType, revenue, pageNumber } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+
+      // Look up user by sessionId to prevent IDOR
+      const endUser = await storage.getEndUserBySessionId(sessionId);
+      if (!endUser) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Validate input using Zod schema - NO revenue from client!
+      const interactionSchema = z.object({
+        offerId: z.string().uuid("Invalid offer ID"),
+        interactionType: z.enum(['view', 'click'], { message: "Only view and click allowed from client" }),
+        pageNumber: z.number().min(1).max(100, "Invalid page number").optional(),
+      });
+
+      const validatedData = interactionSchema.parse({
+        offerId,
+        interactionType,
+        pageNumber
+      });
+
+      // Security: Revenue and conversions can only be set server-side
+      if (revenue || interactionType === 'conversion') {
+        return res.status(400).json({ message: "Revenue and conversions must come from server-side sources only" });
+      }
+
+      // Verify offer exists
+      const offer = await storage.getOffer(validatedData.offerId);
+      if (!offer) {
+        return res.status(404).json({ message: "Offer not found" });
+      }
+
       const interactionData = {
-        endUserId: req.body.endUserId,
-        offerId: req.body.offerId,
-        interactionType: req.body.interactionType,
-        revenue: req.body.revenue || '0.00',
-        pageNumber: req.body.pageNumber,
+        endUserId: endUser.id,
+        offerId: validatedData.offerId,
+        interactionType: validatedData.interactionType,
+        revenue: '0.00', // Client interactions never have revenue
+        pageNumber: validatedData.pageNumber,
       };
       
       const interaction = await storage.createOfferInteraction(interactionData);
       
-      // Check if this interaction triggers postback threshold
-      if (interaction.revenue && parseFloat(interaction.revenue.toString()) > 0) {
-        const endUser = await storage.getEndUser(interaction.endUserId);
-        if (endUser) {
-          const totalRevenue = parseFloat(endUser.totalRevenue?.toString() || '0');
-          await revenueTracker.checkAndFirePostback(interaction.endUserId, totalRevenue);
-        }
-      }
+      // Client interactions (view/click) never trigger postbacks
+      // Only server-to-server conversions should trigger revenue and postbacks
       
       res.json(interaction);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
       console.error("Error creating offer interaction:", error);
       res.status(400).json({ message: "Invalid interaction data" });
+    }
+  });
+
+  // Secure server-to-server conversion webhook (for legitimate conversions)
+  app.post('/api/postback/conversion', async (req, res) => {
+    try {
+      // Validate server-to-server authentication (implement proper webhook security)
+      const authHeader = req.get('Authorization');
+      if (!authHeader || authHeader !== `Bearer ${process.env.WEBHOOK_SECRET}`) {
+        return res.status(401).json({ message: "Unauthorized webhook access" });
+      }
+
+      const { sessionId, offerId, revenue, source } = req.body;
+
+      // Validate input for server-to-server conversions
+      const conversionSchema = z.object({
+        sessionId: z.string().min(1, "Session ID required"),
+        offerId: z.string().uuid("Invalid offer ID"),
+        revenue: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid revenue format"),
+        source: z.string().min(1, "Conversion source required"),
+      });
+
+      const validatedData = conversionSchema.parse({ sessionId, offerId, revenue, source });
+
+      // Look up user by sessionId
+      const endUser = await storage.getEndUserBySessionId(validatedData.sessionId);
+      if (!endUser) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Verify offer exists and get payout limit
+      const offer = await storage.getOffer(validatedData.offerId);
+      if (!offer) {
+        return res.status(404).json({ message: "Offer not found" });
+      }
+
+      // Security: Clamp revenue to offer payout (prevent over-payment)
+      const maxRevenue = parseFloat(offer.payout);
+      const clampedRevenue = Math.min(parseFloat(validatedData.revenue), maxRevenue);
+
+      // Create conversion interaction with server-validated revenue
+      const interactionData = {
+        endUserId: endUser.id,
+        offerId: validatedData.offerId,
+        interactionType: 'conversion' as const,
+        revenue: clampedRevenue.toFixed(2),
+        pageNumber: endUser.currentQuestionIndex || 1,
+      };
+
+      const interaction = await storage.createOfferInteraction(interactionData);
+
+      // Check if this conversion triggers postback threshold
+      const updatedUser = await storage.getEndUser(endUser.id);
+      if (updatedUser) {
+        const totalRevenue = parseFloat(updatedUser.totalRevenue?.toString() || '0');
+        await revenueTracker.checkAndFirePostback(endUser.id, totalRevenue);
+      }
+
+      res.json({ 
+        success: true, 
+        interaction,
+        clampedRevenue: clampedRevenue.toFixed(2),
+        originalRevenue: validatedData.revenue 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid conversion data", errors: error.errors });
+      }
+      console.error("Error processing conversion:", error);
+      res.status(500).json({ message: "Failed to process conversion" });
     }
   });
 
