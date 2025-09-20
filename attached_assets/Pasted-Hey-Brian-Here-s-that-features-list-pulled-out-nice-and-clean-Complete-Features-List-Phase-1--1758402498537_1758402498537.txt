@@ -1,0 +1,110 @@
+Hey Brian! Here's that features list pulled out, nice and clean:
+📋 Complete Features List
+Phase 1: Core Platform
+User Flow Management
+
+Registration form (name, email, age, gender, address, optional phone)
+Source/sub-source tracking via URL params
+Session creation with unique IDs
+Browser fingerprinting for fraud prevention
+30-page survey flow with progress indicator
+Back button with state preservation
+Auto-save every 3 questions
+Resume capability for drop-offs
+Mobile swipe navigation
+
+Question Management
+
+Add/Edit/Delete via admin panel
+Drag-and-drop reordering
+Conditional logic rules (if X, show Y)
+Category tagging (health, finance, shopping, etc.)
+Required/optional marking
+Preview mode before publishing
+
+Offer Management System
+
+CRUD operations (Create, Read, Update, Delete)
+Auto-pull details from Tune API by ID
+Bulk import via CSV
+Clone offers for variations
+Configure payouts, demographics, display pages
+Set position on pages (1st, 2nd, 3rd)
+Schedule offers (start/end dates)
+Daily/weekly/monthly caps
+Geo-targeting (state/country)
+Device targeting (mobile/desktop)
+Time-based display (dayparting)
+Frequency capping per user
+
+Revenue Tracking Dashboard
+
+Live user count
+Today's revenue counter
+Current conversion rate
+Active offers performance
+Daily/Weekly/Monthly revenue charts
+User completion funnel visualization
+Source performance comparison
+Offer performance heatmap
+Question drop-off analysis
+CSV exports with custom date ranges
+Scheduled email reports
+
+Admin Panel
+
+Dashboard with key metrics summary
+Revenue trend graphs
+Top performing offers view
+Recent user completions
+System health indicators
+Individual user journey tracking
+Search users by email/ID
+Manual postback triggering
+Block/flag suspicious users
+Configure revenue thresholds by source
+Manage API keys (Tune, OpenAI)
+
+Phase 2: Intelligence Features
+AI Question Generation
+
+Daily batch generation (50-100 questions)
+Demographic-specific variations
+Seasonal/trending topic inclusion
+Auto-retire underperforming questions (<2% conversion)
+A/B test question variations
+Track question-to-offer conversion paths
+Manual review/edit of AI suggestions
+
+Advanced Analytics Suite
+
+Cohort analysis
+Track user groups over time
+Lifetime value calculations
+Multi-touch attribution
+Question influence on conversions
+Offer interaction analysis
+User value prediction
+Completion probability scoring
+Churn prediction
+
+A/B Testing Framework
+
+Create test variants (questions, offers, flows)
+Set traffic split percentages
+Define success metrics
+Statistical significance thresholds
+Pause/resume tests
+Early winner detection
+Automatic winner deployment
+
+Automation Features
+
+Smart offer rotation
+Auto-optimize offer positions
+Pause underperforming offers
+Scale winning combinations
+Dayparting optimization
+Dynamic postback thresholds based on source quality
+Seasonal adjustments
+Real-time ROI optimization
