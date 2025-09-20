@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Gift
 } from "lucide-react";
+import type { EndUser, Question, Offer } from "@shared/schema";
 
 interface SurveyProps {
   params?: {
@@ -31,18 +32,18 @@ export default function Survey({ params }: SurveyProps) {
   const sessionId = params?.sessionId;
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
-  const [currentOffers, setCurrentOffers] = useState<any[]>([]);
+  const [currentOffers, setCurrentOffers] = useState<Offer[]>([]);
   const [userRevenue, setUserRevenue] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
 
   // Fetch user session
-  const { data: userSession, isLoading: sessionLoading } = useQuery({
+  const { data: userSession, isLoading: sessionLoading } = useQuery<EndUser>({
     queryKey: ['/api/user/session', sessionId],
     enabled: !!sessionId,
   });
 
   // Fetch questions
-  const { data: questions, isLoading: questionsLoading } = useQuery({
+  const { data: questions, isLoading: questionsLoading } = useQuery<Question[]>({
     queryKey: ['/api/questions', { active: true }],
   });
 
@@ -161,7 +162,7 @@ export default function Survey({ params }: SurveyProps) {
     }
   };
 
-  const handleOfferClick = (offer: any) => {
+  const handleOfferClick = (offer: Offer) => {
     // Track click
     offerInteractionMutation.mutate({
       offerId: offer.id,
@@ -172,7 +173,7 @@ export default function Survey({ params }: SurveyProps) {
     window.open(offer.clickUrl || '#', '_blank');
   };
 
-  const handleOfferConversion = (offer: any) => {
+  const handleOfferConversion = (offer: Offer) => {
     // Track conversion with revenue
     offerInteractionMutation.mutate({
       offerId: offer.id,

@@ -95,6 +95,7 @@ export const offers = pgTable("offers", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   imageUrl: varchar("image_url", { length: 500 }),
+  clickUrl: varchar("click_url", { length: 500 }),
   payout: decimal("payout", { precision: 10, scale: 2 }).notNull(),
   category: varchar("category", { length: 100 }),
   displayPages: integer("display_pages").array(), // Pages where offer should appear
