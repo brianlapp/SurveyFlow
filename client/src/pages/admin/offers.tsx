@@ -1,0 +1,339 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OfferCard } from "@/components/admin/offer-card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertOfferSchema } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Upload, Filter } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { z } from "zod";
+
+const createOfferFormSchema = insertOfferSchema.extend({
+  displayPages: z.array(z.number()).optional(),
+});
+
+type CreateOfferForm = z.infer<typeof createOfferFormSchema>;
+
+export default function Offers() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [filters, setFilters] = useState({
+    category: 'all',
+    status: 'all',
+    search: '',
+  });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: offers, isLoading } = useQuery({
+    queryKey: ['/api/offers'],
+  });
+
+  const createOfferMutation = useMutation({
+    mutationFn: async (data: CreateOfferForm) => {
+      await apiRequest('POST', '/api/offers', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
+      setShowCreateModal(false);
+      toast({
+        title: "Success",
+        description: "Offer created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const form = useForm<CreateOfferForm>({
+    resolver: zodResolver(createOfferFormSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      payout: '0.00',
+      category: '',
+      tuneOfferId: '',
+      displayPages: [],
+      position: 1,
+      isActive: true,
+      isPaused: false,
+    },
+  });
+
+  const onSubmit = (data: CreateOfferForm) => {
+    createOfferMutation.mutate(data);
+  };
+
+  const offersArray = Array.isArray(offers) ? offers : [];
+  const filteredOffers = offersArray.filter((offer: any) => {
+    if (filters.category && filters.category !== 'all' && offer.category !== filters.category) return false;
+    if (filters.status === 'active' && (!offer.isActive || offer.isPaused)) return false;
+    if (filters.status === 'paused' && !offer.isPaused) return false;
+    if (filters.status === 'inactive' && offer.isActive) return false;
+    if (filters.search && !offer.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div className="p-6 space-y-6" data-testid="offers-page">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Offers Management</h2>
+          <p className="text-muted-foreground">Manage and configure co-registration offers</p>
+        </div>
+        <div className="flex space-x-3">
+          <Button variant="secondary" data-testid="button-import">
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
+          </Button>
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            data-testid="button-create-offer"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Offer
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Category</label>
+              <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
+                <SelectTrigger data-testid="select-category">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="financial">Financial Services</SelectItem>
+                  <SelectItem value="health">Health & Wellness</SelectItem>
+                  <SelectItem value="shopping">Shopping</SelectItem>
+                  <SelectItem value="travel">Travel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Status</label>
+              <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+                <SelectTrigger data-testid="select-status">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Payout Range</label>
+              <Select>
+                <SelectTrigger data-testid="select-payout">
+                  <SelectValue placeholder="All Payouts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payouts</SelectItem>
+                  <SelectItem value="0-1">$0 - $1</SelectItem>
+                  <SelectItem value="1-3">$1 - $3</SelectItem>
+                  <SelectItem value="3-5">$3 - $5</SelectItem>
+                  <SelectItem value="5+">$5+</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Search</label>
+              <Input
+                placeholder="Search offers..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                data-testid="input-search"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Offers Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredOffers.map((offer: any) => (
+            <OfferCard key={offer.id} offer={offer} />
+          ))}
+          
+          {filteredOffers.length === 0 && (
+            <div className="col-span-full text-center py-12">
+              <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-lg text-muted-foreground">No offers found</p>
+              <p className="text-sm text-muted-foreground">Try adjusting your filters</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create Offer Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-2xl" data-testid="modal-create-offer">
+          <DialogHeader>
+            <DialogTitle>Add New Offer</DialogTitle>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="tuneOfferId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tune Offer ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="12345" {...field} data-testid="input-tune-id" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payout"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payout Amount *</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <span className="mr-2">$</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="2.50"
+                            {...field}
+                            data-testid="input-payout"
+                          />
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Offer Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Insurance Quote" {...field} data-testid="input-name" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Offer description..." {...field} data-testid="textarea-description" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category *</FormLabel>
+                    <FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger data-testid="select-form-category">
+                          <SelectValue placeholder="Select Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="financial">Financial Services</SelectItem>
+                          <SelectItem value="health">Health & Wellness</SelectItem>
+                          <SelectItem value="shopping">Shopping</SelectItem>
+                          <SelectItem value="travel">Travel</SelectItem>
+                          <SelectItem value="education">Education</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <div>
+                <FormLabel>Display Pages</FormLabel>
+                <div className="grid grid-cols-6 gap-2 mt-2">
+                  {[5, 10, 15, 20, 25, 30].map((page) => (
+                    <label key={page} className="flex items-center">
+                      <Checkbox
+                        checked={form.watch('displayPages')?.includes(page)}
+                        onCheckedChange={(checked) => {
+                          const current = form.getValues('displayPages') || [];
+                          if (checked) {
+                            form.setValue('displayPages', [...current, page]);
+                          } else {
+                            form.setValue('displayPages', current.filter(p => p !== page));
+                          }
+                        }}
+                        data-testid={`checkbox-page-${page}`}
+                      />
+                      <span className="ml-1">{page}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowCreateModal(false)}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createOfferMutation.isPending}
+                  data-testid="button-create"
+                >
+                  {createOfferMutation.isPending ? 'Creating...' : 'Create Offer'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
