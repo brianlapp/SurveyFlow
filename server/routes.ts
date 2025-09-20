@@ -61,8 +61,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertEndUserSchema.parse({
         ...req.body,
-        sessionId: randomUUID(),
-        browserFingerprint: req.get('X-Fingerprint'),
+        sessionId: req.body.sessionId || randomUUID(),
+        browserFingerprint: req.body.browserFingerprint || req.get('X-Fingerprint'),
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
       });
@@ -71,7 +71,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(endUser);
     } catch (error) {
       console.error("Error registering user:", error);
-      res.status(400).json({ message: "Invalid user data" });
+      console.error("Request body:", req.body);
+      res.status(400).json({ message: "Invalid user data", error: error.message });
     }
   });
 

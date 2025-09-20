@@ -15,7 +15,14 @@ import { insertEndUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { User, MapPin, Shield, Fingerprint } from "lucide-react";
 
-const registerFormSchema = insertEndUserSchema.extend({
+const registerFormSchema = insertEndUserSchema.omit({
+  sessionId: true,
+  browserFingerprint: true,
+  ipAddress: true,
+  userAgent: true,
+  source: true,
+  subSource: true,
+}).extend({
   confirmEmail: z.string().email("Please enter a valid email address"),
 }).refine((data) => data.email === data.confirmEmail, {
   message: "Email addresses don't match",
