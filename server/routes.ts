@@ -230,6 +230,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Batch Generation - Manual trigger for testing
+  app.post('/api/questions/generate/batch', isAuthenticated, async (req, res) => {
+    try {
+      const { count = 75, saveToDatabase = false } = req.body;
+      console.log(`Batch generation request: ${count} questions, save: ${saveToDatabase}`);
+      
+      const questions = await openaiService.generateBatchQuestions(count);
+      
+      if (saveToDatabase) {
+        let savedCount = 0;
+        for (const questionData of questions) {
+          try {
+            await storage.createQuestion({
+              ...questionData,
+              isActive: true,
+              orderIndex: 0 // Will be updated by storage if needed
+            });
+            savedCount++;
+          } catch (saveError) {
+            console.error('Error saving question:', saveError);
+            // Continue with other questions
+          }
+        }
+        res.json({ 
+          questions, 
+          generated: questions.length,
+          saved: savedCount,
+          message: `Generated ${questions.length} questions, saved ${savedCount} to database`
+        });
+      } else {
+        res.json({ 
+          questions, 
+          generated: questions.length,
+          message: `Generated ${questions.length} questions (preview only)`
+        });
+      }
+    } catch (error) {
+      console.error("Error in batch generation:", error);
+      res.status(500).json({ message: "Failed to generate batch questions" });
+    }
+  });
+
+  // AI Daily Generation - Automated trigger (would be called by cron/scheduler)
+  app.post('/api/questions/generate/daily', isAuthenticated, async (req, res) => {
+    try {
+      console.log('Daily AI generation triggered');
+      
+      const result = await openaiService.runDailyQuestionGeneration();
+      
+      if (result.success) {
+        // Get the generated questions and save them
+        const batchSize = Math.floor(Math.random() * 51) + 50; // Match the service logic
+        const questions = await openaiService.generateBatchQuestions(batchSize);
+        
+        let savedCount = 0;
+        for (const questionData of questions) {
+          try {
+            await storage.createQuestion({
+              ...questionData,
+              isActive: true,
+              orderIndex: 0 // Storage will handle proper ordering
+            });
+            savedCount++;
+          } catch (saveError) {
+            console.error('Error saving daily generated question:', saveError);
+          }
+        }
+        
+        console.log(`Daily generation completed: ${savedCount}/${questions.length} questions saved`);
+        res.json({ 
+          success: true,
+          generated: questions.length,
+          saved: savedCount,
+          message: `Daily batch completed: ${savedCount} questions added to database`
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: result.error || 'Daily generation failed'
+        });
+      }
+    } catch (error) {
+      console.error("Error in daily generation:", error);
+      res.status(500).json({ success: false, message: "Failed to run daily generation" });
+    }
+  });
+
   // Survey response routes
   app.post('/api/user/response', async (req, res) => {
     try {

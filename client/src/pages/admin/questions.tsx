@@ -27,6 +27,7 @@ type CreateQuestionForm = z.infer<typeof createQuestionFormSchema>;
 export default function Questions() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showBatchGenerateModal, setShowBatchGenerateModal] = useState(false);
   const [filters, setFilters] = useState({
     category: 'all',
     search: '',
@@ -86,6 +87,53 @@ export default function Questions() {
     },
   });
 
+  // AI Batch Generation Mutation
+  const batchGenerateMutation = useMutation({
+    mutationFn: async (data: { count: number; saveToDatabase: boolean }) => {
+      const response = await apiRequest('POST', '/api/questions/generate/batch', data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
+      setShowBatchGenerateModal(false);
+      toast({
+        title: "Batch Generation Complete!",
+        description: data.saved ? 
+          `Generated ${data.generated} questions, saved ${data.saved} to database` :
+          `Generated ${data.generated} questions (preview only)`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Batch Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Daily Generation Mutation
+  const dailyGenerateMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/questions/generate/daily', {});
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
+      toast({
+        title: "Daily Generation Complete!",
+        description: `Generated and saved ${data.saved} questions to database`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Daily Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const form = useForm<CreateQuestionForm>({
     resolver: zodResolver(createQuestionFormSchema),
     defaultValues: {
@@ -106,6 +154,13 @@ export default function Questions() {
     },
   });
 
+  const batchGenerateForm = useForm({
+    defaultValues: {
+      count: 75,
+      saveToDatabase: true,
+    },
+  });
+
   const watchType = form.watch('type');
   const watchOptions = form.watch('options') || [''];
 
@@ -119,6 +174,14 @@ export default function Questions() {
 
   const onGenerateSubmit = (data: any) => {
     generateQuestionsMutation.mutate(data);
+  };
+
+  const onBatchGenerateSubmit = (data: any) => {
+    batchGenerateMutation.mutate(data);
+  };
+
+  const runDailyGeneration = () => {
+    dailyGenerateMutation.mutate();
   };
 
   const addOption = () => {
@@ -160,6 +223,23 @@ export default function Questions() {
           >
             <Wand2 className="h-4 w-4 mr-2" />
             AI Generate
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowBatchGenerateModal(true)}
+            data-testid="button-batch-generate"
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            AI Batch (50-100)
+          </Button>
+          <Button
+            variant="outline"
+            onClick={runDailyGeneration}
+            disabled={dailyGenerateMutation.isPending}
+            data-testid="button-daily-generate"
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            {dailyGenerateMutation.isPending ? 'Running...' : 'Daily Auto Gen'}
           </Button>
           <Button
             onClick={() => setShowCreateModal(true)}
@@ -454,6 +534,81 @@ export default function Questions() {
                 data-testid="button-generate-submit"
               >
                 {generateQuestionsMutation.isPending ? 'Generating...' : 'Generate Questions'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Batch Generate Questions Modal */}
+      <Dialog open={showBatchGenerateModal} onOpenChange={setShowBatchGenerateModal}>
+        <DialogContent data-testid="modal-batch-generate-questions" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>AI Batch Generation</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Generate 50-100 questions across 12 demographic categories using AI
+            </p>
+          </DialogHeader>
+          
+          <form onSubmit={batchGenerateForm.handleSubmit(onBatchGenerateSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Total Questions</label>
+              <Input
+                type="number"
+                min="50"
+                max="100"
+                {...batchGenerateForm.register('count', { valueAsNumber: true })}
+                data-testid="input-batch-count"
+                placeholder="75"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Questions will be distributed across Demographics, Lifestyle, Technology, Financial Services, etc.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="saveToDatabase"
+                {...batchGenerateForm.register('saveToDatabase')}
+                className="rounded"
+                data-testid="checkbox-save-database"
+              />
+              <label htmlFor="saveToDatabase" className="text-sm font-medium">
+                Save to Database
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Uncheck to preview only
+              </p>
+            </div>
+            
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Wand2 className="h-4 w-4 text-blue-600" />
+                <p className="text-sm text-blue-800 font-medium">
+                  AI-Powered Demographic Distribution
+                </p>
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                Questions automatically created across: Demographics, Lifestyle, Technology, Financial Services, Health & Wellness, Entertainment, Travel, Education, Automotive, Home & Garden, Food & Dining, Shopping Preferences
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowBatchGenerateModal(false)}
+                data-testid="button-cancel-batch"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={batchGenerateMutation.isPending}
+                data-testid="button-batch-generate-submit"
+              >
+                {batchGenerateMutation.isPending ? 'Generating...' : 'Generate Batch'}
               </Button>
             </div>
           </form>
