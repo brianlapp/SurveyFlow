@@ -18,25 +18,26 @@ import {
 import { addDays } from "date-fns";
 
 export default function Analytics() {
-  const [dateRange, setDateRange] = useState({
+  const [dateRange, setDateRange] = useState<{from: Date | undefined, to: Date | undefined}>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });
 
   const { data: dailyStats, isLoading } = useQuery({
-    queryKey: ['/api/analytics/daily-stats', dateRange.from.toISOString(), dateRange.to.toISOString()],
+    queryKey: ['/api/analytics/daily-stats', dateRange.from?.toISOString(), dateRange.to?.toISOString()],
+    enabled: !!(dateRange.from && dateRange.to), // Only run query when dates are valid
   });
 
   const { data: metrics } = useQuery({
     queryKey: ['/api/dashboard/metrics'],
   });
 
-  const totalStats = dailyStats?.reduce((acc: any, day: any) => ({
+  const totalStats = Array.isArray(dailyStats) ? dailyStats.reduce((acc: any, day: any) => ({
     totalUsers: acc.totalUsers + (day.totalUsers || 0),
     completedSurveys: acc.completedSurveys + (day.completedSurveys || 0),
     totalRevenue: acc.totalRevenue + parseFloat(day.totalRevenue || '0'),
     postbacksFired: acc.postbacksFired + (day.postbacksFired || 0),
-  }), { totalUsers: 0, completedSurveys: 0, totalRevenue: 0, postbacksFired: 0 }) || {};
+  }), { totalUsers: 0, completedSurveys: 0, totalRevenue: 0, postbacksFired: 0 }) : { totalUsers: 0, completedSurveys: 0, totalRevenue: 0, postbacksFired: 0 };
 
   return (
     <div className="p-6 space-y-6" data-testid="analytics-page">
@@ -69,7 +70,11 @@ export default function Analytics() {
             <div className="flex items-center space-x-4">
               <DatePickerWithRange
                 date={dateRange}
-                onDateChange={(range) => range && setDateRange(range)}
+                onDateChange={(range) => {
+                  if (range && range.from && range.to) {
+                    setDateRange(range);
+                  }
+                }}
                 data-testid="date-range-picker"
               />
               <Select defaultValue="daily">

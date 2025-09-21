@@ -91,10 +91,13 @@ export default function Survey({ params }: SurveyProps) {
     return () => clearInterval(timer);
   }, []);
 
-  // Load user data into form when session loads
+  // Load user data into form when session loads (but preserve step progression)
   useEffect(() => {
     if (userSession) {
-      setCurrentStep(userSession.currentQuestionIndex || 1);
+      // Only update currentStep if it's the initial load or if server is ahead
+      const serverStep = userSession.currentQuestionIndex || 1;
+      setCurrentStep(prevStep => Math.max(prevStep, serverStep));
+      
       setUserRevenue(parseFloat(userSession.totalRevenue?.toString() || '0'));
       setFormData(prev => ({
         ...prev,
@@ -107,6 +110,7 @@ export default function Survey({ params }: SurveyProps) {
         zip: userSession.zip || "",
         phone: userSession.phone || ""
       }));
+      console.log(`Session sync: server step ${serverStep}, keeping local step at ${Math.max(currentStep, serverStep)}`); // Debug
     }
   }, [userSession]);
 
@@ -119,9 +123,11 @@ export default function Survey({ params }: SurveyProps) {
       });
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
       if (currentStep < 3) {
-        setCurrentStep(prev => prev + 1);
+        const nextStep = currentStep + 1;
+        setCurrentStep(nextStep);
+        console.log(`Step progression: ${currentStep} -> ${nextStep}`); // Debug logging
         toast({
           title: "Progress Saved",
           description: `Step ${currentStep} completed successfully!`,
@@ -133,8 +139,10 @@ export default function Survey({ params }: SurveyProps) {
           description: "Your free product order has been processed!",
         });
       }
-      // Invalidate session query to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/user/session', sessionId] });
+      // Invalidate session query to refresh data (after a small delay to prevent race condition)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/user/session', sessionId] });
+      }, 100);
     },
     onError: () => {
       toast({
@@ -208,6 +216,7 @@ export default function Survey({ params }: SurveyProps) {
       }
     }
     
+    console.log("Submitting step data:", stepData); // Debug logging
     submitFormMutation.mutate(stepData);
   };
 

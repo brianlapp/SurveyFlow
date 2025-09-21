@@ -338,21 +338,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let offerData = insertOfferSchema.parse(req.body);
       
-      // If Tune offer ID provided, fetch details from Tune API
+      // If Tune offer ID provided, try to fetch details from Tune API
       if (offerData.tuneOfferId) {
         try {
           const tuneOfferDetails = await tuneApi.getOfferDetails(offerData.tuneOfferId);
           offerData = { ...offerData, ...tuneOfferDetails };
+          console.log("Successfully fetched Tune offer details for:", offerData.tuneOfferId);
         } catch (tuneError) {
-          console.warn("Could not fetch Tune offer details:", tuneError);
+          console.warn("Could not fetch Tune offer details for offer ID:", offerData.tuneOfferId, "Error:", tuneError.message);
+          // Continue with original data - Tune API failure should not block offer creation
         }
       }
       
+      // Ensure required fields have defaults if not provided by Tune API
+      if (!offerData.clickUrl) {
+        offerData.clickUrl = `https://example.com/offer/${offerData.tuneOfferId || 'default'}`;
+      }
+      
+      console.log("Creating offer with data:", JSON.stringify(offerData, null, 2));
       const offer = await storage.createOffer(offerData);
+      console.log("Offer created successfully:", offer.id);
       res.json(offer);
     } catch (error) {
       console.error("Error creating offer:", error);
-      res.status(400).json({ message: "Invalid offer data" });
+      if (error.message && error.message.includes('column')) {
+        res.status(400).json({ message: "Database schema error: " + error.message });
+      } else {
+        res.status(400).json({ message: "Failed to create offer: " + (error.message || "Unknown error") });
+      }
     }
   });
 

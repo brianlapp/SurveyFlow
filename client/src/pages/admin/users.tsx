@@ -11,8 +11,8 @@ import { Download, TrendingUp, Search, User, Eye } from "lucide-react";
 export default function Users() {
   const [filters, setFilters] = useState({
     search: '',
-    status: '',
-    source: '',
+    status: 'all',
+    source: 'all',
   });
 
   const { data: users, isLoading } = useQuery({
@@ -25,7 +25,7 @@ export default function Users() {
     }
     if (filters.status === 'completed' && !user.surveyCompleted) return false;
     if (filters.status === 'pending' && user.surveyCompleted) return false;
-    if (filters.source && user.source !== filters.source) return false;
+    if (filters.source && filters.source !== 'all' && user.source !== filters.source) return false;
     return true;
   }) || [];
 
@@ -145,7 +145,7 @@ export default function Users() {
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="pending">In Progress</SelectItem>
                 </SelectContent>
@@ -158,7 +158,7 @@ export default function Users() {
                   <SelectValue placeholder="All Sources" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Sources</SelectItem>
+                  <SelectItem value="all">All Sources</SelectItem>
                   <SelectItem value="facebook_ads">Facebook Ads</SelectItem>
                   <SelectItem value="google_ads">Google Ads</SelectItem>
                   <SelectItem value="organic">Organic</SelectItem>

@@ -28,7 +28,7 @@ export default function Questions() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [filters, setFilters] = useState({
-    category: '',
+    category: 'all',
     search: '',
   });
 
@@ -139,7 +139,7 @@ export default function Questions() {
   };
 
   const filteredQuestions = questions?.filter((question: any) => {
-    if (filters.category && question.category !== filters.category) return false;
+    if (filters.category && filters.category !== 'all' && question.category !== filters.category) return false;
     if (filters.search && !question.text.toLowerCase().includes(filters.search.toLowerCase())) return false;
     return true;
   })?.sort((a: any, b: any) => a.orderIndex - b.orderIndex) || [];
@@ -191,7 +191,7 @@ export default function Questions() {
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="demographics">Demographics</SelectItem>
                     <SelectItem value="interests">Interests</SelectItem>
                     <SelectItem value="financial">Financial</SelectItem>
