@@ -7,7 +7,7 @@ export default function Landing() {
       <Card className="w-full max-w-md">
         <CardContent className="pt-8 pb-6">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary mb-2">Co-Reg Platform</h1>
+            <h1 className="text-3xl font-bold text-primary mb-2">SurveyFlow</h1>
             <p className="text-muted-foreground">Admin Dashboard Access</p>
           </div>
           
