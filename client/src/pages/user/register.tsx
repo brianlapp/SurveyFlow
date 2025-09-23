@@ -61,21 +61,40 @@ export default function Register() {
   });
 
   useEffect(() => {
-    // Extract tracking parameters from URL
+    // Extract tracking parameters from URL or localStorage
     const urlParams = new URLSearchParams(window.location.search);
-    const source = urlParams.get('source') || 'direct';
-    const subSource = urlParams.get('sub_source') || '';
     
-    // Generate session ID and browser fingerprint
-    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const fingerprint = `fp_${navigator.userAgent.length}_${screen.width}x${screen.height}_${navigator.language}`;
+    // Try to get tracking info from localStorage first (for persistence)
+    const savedTrackingInfo = localStorage.getItem('surveyTrackingInfo');
+    let trackingData = null;
     
-    setTrackingInfo({
+    if (savedTrackingInfo) {
+      try {
+        trackingData = JSON.parse(savedTrackingInfo);
+      } catch (error) {
+        console.warn('Failed to parse saved tracking info:', error);
+      }
+    }
+    
+    // Use URL params if available, otherwise use saved data, otherwise defaults
+    const source = urlParams.get('source') || trackingData?.source || 'direct';
+    const subSource = urlParams.get('sub_source') || trackingData?.subSource || '';
+    
+    // Generate session ID and browser fingerprint if not already saved
+    const sessionId = trackingData?.sessionId || `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const fingerprint = trackingData?.fingerprint || `fp_${navigator.userAgent.length}_${screen.width}x${screen.height}_${navigator.language}`;
+    
+    const finalTrackingInfo = {
       source,
       subSource,
       sessionId,
       fingerprint,
-    });
+    };
+    
+    // Save tracking info to localStorage for persistence
+    localStorage.setItem('surveyTrackingInfo', JSON.stringify(finalTrackingInfo));
+    
+    setTrackingInfo(finalTrackingInfo);
   }, []);
 
   const registerMutation = useMutation({
@@ -95,17 +114,45 @@ export default function Register() {
       return await response.json();
     },
     onSuccess: (data) => {
+      // Clear tracking info from localStorage since registration is complete
+      localStorage.removeItem('surveyTrackingInfo');
+      
+      // Store session info for the flow
+      localStorage.setItem('surveySessionId', data.sessionId);
+      
       toast({
         title: "Registration Successful",
         description: "Welcome! Let's get started with your survey.",
       });
-      // Navigate to survey with session ID
-      setLocation(`/survey/${data.sessionId}`);
+      
+      // Navigate to survey with session ID and preserve tracking params if needed
+      const urlParams = new URLSearchParams(window.location.search);
+      const surveyUrl = `/survey/${data.sessionId}`;
+      const trackingParams = new URLSearchParams();
+      
+      if (urlParams.get('source')) trackingParams.set('source', urlParams.get('source')!);
+      if (urlParams.get('sub_source')) trackingParams.set('sub_source', urlParams.get('sub_source')!);
+      
+      const finalUrl = trackingParams.toString() ? `${surveyUrl}?${trackingParams.toString()}` : surveyUrl;
+      setLocation(finalUrl);
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      let errorMessage = "Registration failed. Please try again.";
+      
+      // Provide specific error messages based on error type
+      if (error?.status === 400) {
+        errorMessage = "Please check your information and try again.";
+      } else if (error?.status === 409) {
+        errorMessage = "This email is already registered. Please use a different email.";
+      } else if (error?.status === 429) {
+        errorMessage = "Too many attempts. Please wait a moment and try again.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Registration Failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     },

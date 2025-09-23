@@ -62,13 +62,49 @@ export default function ExitLottery({ params }: ExitLotteryProps) {
         });
       }
     },
+    onError: (error: any) => {
+      let errorMessage = "Failed to record interaction. Please try again.";
+      
+      if (error?.status === 401) {
+        errorMessage = "Your session has expired. Please start over.";
+        localStorage.removeItem('surveySessionId');
+        setTimeout(() => setLocation('/register'), 2000);
+      } else if (error?.status === 404) {
+        errorMessage = "Session not found. Please complete the survey first.";
+        setTimeout(() => setLocation('/register'), 2000);
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
   });
 
+  // Enhanced session validation and navigation guard  
   useEffect(() => {
     if (!sessionId) {
+      console.warn('No session ID provided for exit lottery, redirecting to registration');
       setLocation('/register');
+      return;
     }
-  }, [sessionId, setLocation]);
+    
+    // Check if this session completed the survey
+    const savedSessionId = localStorage.getItem('surveySessionId');
+    if (!savedSessionId || savedSessionId !== sessionId) {
+      console.warn('Invalid or mismatched session ID for exit lottery, redirecting to registration');
+      toast({
+        title: "Session Required",
+        description: "Please complete the survey first to access the exit lottery.",
+        variant: "destructive",
+      });
+      setTimeout(() => setLocation('/register'), 2000);
+      return;
+    }
+  }, [sessionId, setLocation, toast]);
 
   const handleSpin = () => {
     if (!exitOffers || exitOffers.length === 0 || isSpinning || hasSpun) return;

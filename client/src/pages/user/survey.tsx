@@ -161,10 +161,27 @@ export default function Survey({ params }: SurveyProps) {
         queryClient.invalidateQueries({ queryKey: ['/api/user/session', sessionId] });
       }, 100);
     },
-    onError: () => {
+    onError: (error: any) => {
+      let errorMessage = "Failed to save your progress. Please try again.";
+      
+      // Provide specific error messages
+      if (error?.status === 401) {
+        errorMessage = "Your session has expired. Please start over.";
+        localStorage.removeItem('surveySessionId');
+        setTimeout(() => setLocation('/register'), 2000);
+      } else if (error?.status === 404) {
+        errorMessage = "Session not found. Please start a new survey.";
+        localStorage.removeItem('surveySessionId');
+        setTimeout(() => setLocation('/register'), 2000);
+      } else if (error?.status === 400) {
+        errorMessage = "Please check your information and try again.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to save your progress. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -192,9 +209,21 @@ export default function Survey({ params }: SurveyProps) {
     },
   });
 
+  // Enhanced session validation and navigation guard
   useEffect(() => {
     if (!sessionId) {
+      console.warn('No session ID provided, redirecting to registration');
       setLocation('/register');
+      return;
+    }
+    
+    // Additional validation - check if session exists in localStorage
+    const savedSessionId = localStorage.getItem('surveySessionId');
+    if (savedSessionId && savedSessionId !== sessionId) {
+      console.warn('Session ID mismatch, redirecting to registration');
+      localStorage.removeItem('surveySessionId');
+      setLocation('/register');
+      return;
     }
   }, [sessionId, setLocation]);
 
