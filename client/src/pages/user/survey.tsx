@@ -10,6 +10,7 @@ import { ProgressBar } from "@/components/user/progress-bar";
 import { SurveyStep } from "@/components/user/survey-step";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { OfferCardDisplay } from "@/components/user/offer-card-display";
 import { 
   CheckCircle, 
   DollarSign, 
@@ -19,9 +20,11 @@ import {
   MapPin,
   CreditCard,
   ExternalLink,
-  Gift
+  Gift,
+  Sparkles
 } from "lucide-react";
 import type { EndUser, Offer, Question } from "@shared/schema";
+import type { PublicOffer } from "@shared/types";
 import brandLogo from "@assets/brand-logo.png";
 import productImage from "@assets/stock_images/pink_slides_sandals__9c5591d5.jpg";
 
@@ -51,7 +54,7 @@ export default function Survey({ params }: SurveyProps) {
     zip: "",
     phone: ""
   });
-  const [currentOffers, setCurrentOffers] = useState<Offer[]>([]);
+  const [currentOffers, setCurrentOffers] = useState<PublicOffer[]>([]);
   const [userRevenue, setUserRevenue] = useState(0);
   const [countdown, setCountdown] = useState({ hours: 7, minutes: 10, seconds: 20 });
   const [isCompleted, setIsCompleted] = useState(false);
@@ -73,7 +76,7 @@ export default function Survey({ params }: SurveyProps) {
   });
 
   // Fetch offers for Step 3
-  const { data: offers, isLoading: offersLoading } = useQuery<Offer[]>({
+  const { data: offers, isLoading: offersLoading } = useQuery<PublicOffer[]>({
     queryKey: ['/api/offers/public'],
     enabled: currentStep === 3,
   });
@@ -194,7 +197,24 @@ export default function Survey({ params }: SurveyProps) {
 
   useEffect(() => {
     if (offers && offers.length > 0 && currentStep === 3) {
-      setCurrentOffers(offers.slice(0, 3)); // Show top 3 offers
+      // Sort offers for optimal display using public display fields
+      const sortedOffers = [...offers].sort((a, b) => {
+        const aSavings = parseFloat(a.originalPrice?.replace('$', '') || '0') - parseFloat(a.discountPrice?.replace('$', '') || '0');
+        const bSavings = parseFloat(b.originalPrice?.replace('$', '') || '0') - parseFloat(b.discountPrice?.replace('$', '') || '0');
+        
+        // Premium offers (high savings) first
+        if (aSavings >= 50 && bSavings < 50) return -1;
+        if (bSavings >= 50 && aSavings < 50) return 1;
+        
+        // Featured offers (high rating or position 1) next
+        if ((a.rating >= 4.5 || a.position === 1) && !(b.rating >= 4.5 || b.position === 1)) return -1;
+        if ((b.rating >= 4.5 || b.position === 1) && !(a.rating >= 4.5 || a.position === 1)) return 1;
+        
+        // Sort by savings amount descending
+        return bSavings - aSavings;
+      });
+      
+      setCurrentOffers(sortedOffers.slice(0, 6)); // Show up to 6 offers with varied layout
     }
   }, [offers, currentStep]);
 
@@ -272,7 +292,7 @@ export default function Survey({ params }: SurveyProps) {
     }
   };
 
-  const handleOfferClick = (offer: Offer) => {
+  const handleOfferClick = (offer: PublicOffer) => {
     // Track click
     offerInteractionMutation.mutate({
       offerId: offer.id,
@@ -283,7 +303,7 @@ export default function Survey({ params }: SurveyProps) {
     window.open(offer.clickUrl || '#', '_blank');
   };
 
-  const handleOfferConversion = (offer: Offer) => {
+  const handleOfferConversion = (offer: PublicOffer) => {
     // Conversions are now server-side only - just track interaction
     offerInteractionMutation.mutate({
       offerId: offer.id,
@@ -637,41 +657,129 @@ export default function Survey({ params }: SurveyProps) {
             
             {/* Special Offers Section */}
             {currentOffers.length > 0 && (
-              <div className="mb-8 p-6 bg-teal-50 rounded-lg border border-teal-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <Gift className="h-5 w-5 text-teal-600" />
-                  <h4 className="font-semibold text-teal-800">Special Offers Just for You!</h4>
+              <div className="mb-8">
+                <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg border border-teal-200 p-6 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-6 w-6 text-teal-600" />
+                    <h4 className="font-bold text-xl text-teal-800">Exclusive Offers Just for You!</h4>
+                  </div>
+                  <p className="text-teal-700 mb-2">
+                    Complete these specially selected offers to earn additional rewards and maximize your benefits!
+                  </p>
+                  <div className="flex items-center gap-4 text-sm text-teal-600">
+                    <span className="flex items-center gap-1">
+                      <Gift className="h-4 w-4" />
+                      No Hidden Fees
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      Instant Rewards
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="h-4 w-4" />
+                      High Payouts
+                    </span>
+                  </div>
                 </div>
-                <p className="text-sm text-teal-700 mb-4">
-                  Complete these offers to earn rewards and qualify for additional benefits!
-                </p>
-                <div className="space-y-3">
-                  {currentOffers.map((offer) => (
-                    <div 
-                      key={offer.id} 
-                      className="bg-white border border-teal-200 rounded-lg p-4"
-                      data-testid={`offer-${offer.id}`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h5 className="font-medium text-sm">{offer.name}</h5>
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
-                          ${offer.payout}
-                        </span>
+
+                {/* Smart Grid Layout for Multiple Card Styles */}
+                <div className="space-y-6">
+                  {/* Premium Offers Row */}
+                  {(() => {
+                    const premiumOffers = currentOffers.filter(offer => {
+                      const savings = parseFloat(offer.originalPrice?.replace('$', '') || '0') - parseFloat(offer.discountPrice?.replace('$', '') || '0');
+                      return savings >= 50;
+                    }).slice(0, 2);
+                    return premiumOffers.length > 0 && (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="premium-offers-row">
+                        {premiumOffers.map((offer) => (
+                          <OfferCardDisplay
+                            key={offer.id}
+                            offer={offer}
+                            onOfferClick={handleOfferClick}
+                            style="premium"
+                          />
+                        ))}
                       </div>
-                      <p className="text-xs text-gray-600 mb-3">
-                        {offer.description}
-                      </p>
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-teal-primary text-white hover:bg-teal-600"
-                        onClick={() => handleOfferClick(offer)}
-                        data-testid={`button-offer-${offer.id}`}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        View Offer
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })()}
+
+                  {/* Featured Offers Row */}
+                  {(() => {
+                    const featuredOffers = currentOffers.filter(offer => {
+                      const savings = parseFloat(offer.originalPrice?.replace('$', '') || '0') - parseFloat(offer.discountPrice?.replace('$', '') || '0');
+                      return savings < 50 && (offer.rating >= 4.5 || offer.position === 1 || offer.offerType === 'giveaway');
+                    }).slice(0, 2);
+                    return featuredOffers.length > 0 && (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="featured-offers-row">
+                        {featuredOffers.map((offer) => (
+                          <OfferCardDisplay
+                            key={offer.id}
+                            offer={offer}
+                            onOfferClick={handleOfferClick}
+                            style="featured"
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Standard Offers Row */}
+                  {(() => {
+                    const standardOffers = currentOffers.filter(offer => {
+                      const savings = parseFloat(offer.originalPrice?.replace('$', '') || '0') - parseFloat(offer.discountPrice?.replace('$', '') || '0');
+                      return savings >= 20 && savings < 50 && !(offer.rating >= 4.5 || offer.position === 1 || offer.offerType === 'giveaway');
+                    }).slice(0, 2);
+                    return standardOffers.length > 0 && (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="standard-offers-row">
+                        {standardOffers.map((offer) => (
+                          <OfferCardDisplay
+                            key={offer.id}
+                            offer={offer}
+                            onOfferClick={handleOfferClick}
+                            style="standard"
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Compact Offers Row */}
+                  {(() => {
+                    const compactOffers = currentOffers.filter(offer => {
+                      const savings = parseFloat(offer.originalPrice?.replace('$', '') || '0') - parseFloat(offer.discountPrice?.replace('$', '') || '0');
+                      return savings < 20;
+                    }).slice(0, 3);
+                    return compactOffers.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="compact-offers-row">
+                        {compactOffers.map((offer) => (
+                          <OfferCardDisplay
+                            key={offer.id}
+                            offer={offer}
+                            onOfferClick={handleOfferClick}
+                            style="compact"
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Savings Potential Summary */}
+                <div className="mt-6 bg-green-50 rounded-lg p-4 border border-green-200" data-testid="savings-potential">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    <span className="font-semibold text-green-800">Total Savings Potential</span>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    Complete all offers above to save up to $
+                    {currentOffers.reduce((total, offer) => {
+                      const originalPrice = parseFloat(offer.originalPrice?.replace('$', '') || '0');
+                      const discountPrice = parseFloat(offer.discountPrice?.replace('$', '') || '0');
+                      return total + (originalPrice - discountPrice);
+                    }, 0).toFixed(0)} 
+                    on premium products and services! Each offer is carefully selected and vetted for quality.
+                  </p>
                 </div>
               </div>
             )}
