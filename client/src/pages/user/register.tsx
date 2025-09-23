@@ -14,6 +14,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertEndUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { User, MapPin, Shield, Fingerprint } from "lucide-react";
+import { ProgressBar } from "@/components/user/progress-bar";
+import brandLogo from "@assets/brand-logo.png";
 
 const registerFormSchema = insertEndUserSchema.omit({
   sessionId: true,
@@ -113,68 +115,63 @@ export default function Register() {
     registerMutation.mutate(data);
   };
 
-  // Determine brand based on current domain or default
-  const getBrandInfo = () => {
-    const hostname = window.location.hostname;
-    
-    if (hostname.includes('modefree')) {
-      return {
-        name: 'ModeFreeFinds',
-        subtitle: 'Discover Amazing Deals!',
-        description: 'Get exclusive access to free samples and special offers',
-        gradient: 'from-blue-500 to-purple-600',
-        theme: 'blue',
-      };
-    } else if (hostname.includes('modemarket')) {
-      return {
-        name: 'ModeMarketMunchies',
-        subtitle: 'Smart Financial Decisions',
-        description: 'Unlock your financial potential with expert insights',
-        gradient: 'from-green-600 to-emerald-700',
-        theme: 'green',
-      };
-    }
-    
-    // Default brand
-    return {
-      name: 'Co-Reg Platform',
-      subtitle: 'Welcome to Our Survey',
-      description: 'Help us understand your preferences and discover relevant offers',
-      gradient: 'from-primary to-primary/80',
-      theme: 'blue',
-    };
+  // Use consistent teal branding to match giveaway page
+  const brandInfo = {
+    name: 'Free Finds',
+    subtitle: 'Registration - Step 1 of 3',
+    description: 'Please provide your information to claim your free item',
+    gradient: 'bg-teal-primary',
+    theme: 'teal',
   };
 
-  const brandInfo = getBrandInfo();
-
   return (
-    <div className="min-h-screen bg-background" data-testid="register-page">
+    <div className="min-h-screen bg-mint-light" data-testid="register-page">
       {/* Header */}
-      <div className={`bg-gradient-to-r ${brandInfo.gradient} text-white py-8`}>
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl font-bold mb-2">{brandInfo.subtitle}</h1>
-          <p className="text-lg opacity-90">{brandInfo.description}</p>
+      <header className={`${brandInfo.gradient} text-white`}>
+        <div className="flex justify-between items-center px-6 py-4">
+          <img 
+            src={brandLogo} 
+            alt="Free Finds" 
+            className="h-12" 
+            data-testid="brand-logo"
+          />
+          <div className="text-center">
+            <h1 className="text-xl font-bold" data-testid="registration-title">
+              {brandInfo.subtitle}
+            </h1>
+            <p className="text-sm">{brandInfo.description}</p>
+          </div>
+          <div className="bg-green-500 px-3 py-1 rounded-full text-sm" data-testid="step-indicator">
+            📝 Step 1/3
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-gray-200 py-4">
+        <div className="max-w-md mx-auto px-4">
+          <ProgressBar current={1} total={3} />
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+      {/* Main Content */}
+      <main className="flex justify-center py-8">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
           {/* Main Registration Form */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-teal-primary text-white rounded-full w-8 h-8 flex items-center justify-center">
                 <User className="h-5 w-5" />
-                Create Your Account
-              </CardTitle>
-              <p className="text-muted-foreground">
-                Please provide your information to get started. This will only take a minute.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Name Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              </div>
+              <h2 className="text-lg font-bold" data-testid="form-title">Registration Form</h2>
+            </div>
+            <p className="text-gray-600 text-sm mb-6">
+              Please provide your information to get started. This will only take a minute.
+            </p>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* Name Fields */}
+                <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
                       name="firstName"
@@ -211,8 +208,8 @@ export default function Register() {
                     />
                   </div>
 
-                  {/* Email Fields */}
-                  <div className="space-y-4">
+                {/* Email Fields */}
+                <div className="space-y-3">
                     <FormField
                       control={form.control}
                       name="email"
@@ -251,8 +248,8 @@ export default function Register() {
                     />
                   </div>
 
-                  {/* Demographics */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Demographics */}
+                <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
                       name="age"
@@ -303,8 +300,8 @@ export default function Register() {
                     />
                   </div>
 
-                  {/* Address */}
-                  <div className="space-y-4">
+                {/* Address */}
+                <div className="space-y-3">
                     <FormField
                       control={form.control}
                       name="address"
@@ -322,7 +319,7 @@ export default function Register() {
                         </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <FormField
                         control={form.control}
                         name="city"
@@ -397,77 +394,36 @@ export default function Register() {
                     )}
                   />
 
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    size="lg"
-                    disabled={registerMutation.isPending}
-                    data-testid="button-start-survey"
-                  >
-                    {registerMutation.isPending ? 'Creating Account...' : 'Start Survey'}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-teal-primary text-white py-3 rounded-lg font-bold text-lg hover:bg-opacity-90 transition-colors" 
+                  disabled={registerMutation.isPending}
+                  data-testid="button-start-survey"
+                >
+                  {registerMutation.isPending ? 'Creating Account...' : 'Continue to Survey →'}
+                </Button>
+              </form>
+            </Form>
+          </div>
 
-          {/* Source Tracking Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Shield className="h-4 w-4" />
-                Privacy & Tracking Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground">Source:</span>
-                    <Badge variant="secondary" className="ml-2" data-testid="badge-source">
-                      {trackingInfo.source}
-                    </Badge>
-                  </div>
-                </div>
-                {trackingInfo.subSource && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <span className="text-muted-foreground">Campaign:</span>
-                      <Badge variant="outline" className="ml-2" data-testid="badge-sub-source">
-                        {trackingInfo.subSource}
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Fingerprint className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground">Session:</span>
-                    <span className="ml-2 font-mono text-xs" data-testid="text-session-id">
-                      {trackingInfo.sessionId.slice(0, 16)}...
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground">Security:</span>
-                    <span className="ml-2 font-mono text-xs" data-testid="text-fingerprint">
-                      Protected
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-4">
-                We use this information to personalize your experience and prevent fraud. 
-                Your data is secure and will never be shared without your consent.
-              </p>
-            </CardContent>
-          </Card>
+          {/* Privacy Notice */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Privacy Protected</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Your information is secure and will never be shared without your consent. 
+              We use this data to personalize your experience and prevent fraud.
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
+      
+      {/* Footer */}
+      <footer className="text-center py-4 text-gray-500 text-sm">
+        Limited To One Per Household
+      </footer>
     </div>
   );
 }
