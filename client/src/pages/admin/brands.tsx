@@ -93,7 +93,13 @@ export default function Brands() {
                 <Settings className="h-4 w-4 mr-1" />
                 Configure
               </Button>
-              <Button size="sm" variant="secondary" className="flex-1" data-testid="button-preview-modefree">
+              <Button 
+                size="sm" 
+                variant="secondary" 
+                className="flex-1" 
+                data-testid="button-preview-modefree"
+                onClick={() => window.open('/', '_blank')}
+              >
                 <Eye className="h-4 w-4 mr-1" />
                 Preview
               </Button>
@@ -171,7 +177,13 @@ export default function Brands() {
                 <Settings className="h-4 w-4 mr-1" />
                 Configure
               </Button>
-              <Button size="sm" variant="secondary" className="flex-1" data-testid="button-preview-modemarket">
+              <Button 
+                size="sm" 
+                variant="secondary" 
+                className="flex-1" 
+                data-testid="button-preview-modemarket"
+                onClick={() => window.open('/', '_blank')}
+              >
                 <Eye className="h-4 w-4 mr-1" />
                 Preview
               </Button>
