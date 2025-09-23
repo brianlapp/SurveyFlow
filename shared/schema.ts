@@ -37,6 +37,19 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Giveaway management
+export const giveaways = pgTable("giveaways", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 255 }).notNull().default('Free Product Giveaway'),
+  imageUrl: varchar("image_url", { length: 500 }).notNull(),
+  retailValue: decimal("retail_value", { precision: 10, scale: 2 }).notNull().default('29.99'),
+  shippingValue: decimal("shipping_value", { precision: 10, scale: 2 }).default('15.00'),
+  countdownHours: integer("countdown_hours").default(8),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // End users (survey participants)
 export const endUsers = pgTable("end_users", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -71,6 +84,8 @@ export const questions = pgTable("questions", {
   type: varchar("type", { length: 50 }).notNull(), // multiple_choice, yes_no, text, multiple_select
   options: jsonb("options"), // Array of options for multiple choice
   category: varchar("category", { length: 50 }),
+  stepNumber: integer("step_number").default(2), // Which step this question appears on
+  questionCategory: varchar("question_category", { length: 100 }), // demographic, lead_gen, qualifying
   isRequired: boolean("is_required").default(true),
   orderIndex: integer("order_index").notNull(),
   conditionalLogic: jsonb("conditional_logic"), // Conditions for showing this question
@@ -98,6 +113,7 @@ export const offers = pgTable("offers", {
   clickUrl: varchar("click_url", { length: 500 }),
   payout: decimal("payout", { precision: 10, scale: 2 }).notNull(),
   category: varchar("category", { length: 100 }),
+  offerType: varchar("offer_type", { length: 50 }).default('main'), // main, exit, giveaway
   displayPages: integer("display_pages").array(), // Pages where offer should appear
   position: integer("position").default(1), // Position on page
   demographics: jsonb("demographics"), // Target demographics
@@ -241,6 +257,12 @@ export const insertOfferInteractionSchema = createInsertSchema(offerInteractions
   createdAt: true,
 });
 
+export const insertGiveawaySchema = createInsertSchema(giveaways).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -254,6 +276,8 @@ export type Response = typeof responses.$inferSelect;
 export type InsertResponse = z.infer<typeof insertResponseSchema>;
 export type OfferInteraction = typeof offerInteractions.$inferSelect;
 export type InsertOfferInteraction = z.infer<typeof insertOfferInteractionSchema>;
+export type Giveaway = typeof giveaways.$inferSelect;
+export type InsertGiveaway = z.infer<typeof insertGiveawaySchema>;
 export type Postback = typeof postbacks.$inferSelect;
 export type DailyStat = typeof dailyStats.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
