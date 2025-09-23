@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProgressBar } from "@/components/user/progress-bar";
+import { SurveyStep } from "@/components/user/survey-step";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -20,7 +21,8 @@ import {
   ExternalLink,
   Gift
 } from "lucide-react";
-import type { EndUser, Offer } from "@shared/schema";
+import type { EndUser, Offer, Question } from "@shared/schema";
+import brandLogo from "@assets/brand-logo.png";
 import productImage from "@assets/stock_images/pink_slides_sandals__9c5591d5.jpg";
 
 interface SurveyProps {
@@ -53,6 +55,8 @@ export default function Survey({ params }: SurveyProps) {
   const [userRevenue, setUserRevenue] = useState(0);
   const [countdown, setCountdown] = useState({ hours: 7, minutes: 10, seconds: 20 });
   const [isCompleted, setIsCompleted] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<string, any>>({});
 
   // Fetch user session with correct endpoint format
   const { data: userSession, isLoading: sessionLoading } = useQuery<EndUser>({
@@ -61,10 +65,17 @@ export default function Survey({ params }: SurveyProps) {
     enabled: !!sessionId,
   });
 
-  // Fetch offers for the current step
+  // Fetch questions for Step 2
+  const { data: questions, isLoading: questionsLoading } = useQuery<Question[]>({
+    queryKey: ['/api/questions'],
+    queryFn: () => apiRequest('GET', '/api/questions?active=true').then(res => res.json()),
+    enabled: currentStep === 2,
+  });
+
+  // Fetch offers for Step 3
   const { data: offers, isLoading: offersLoading } = useQuery<Offer[]>({
     queryKey: ['/api/offers/public'],
-    enabled: currentStep === 2,
+    enabled: currentStep === 3,
   });
 
   // Countdown timer effect
@@ -182,7 +193,7 @@ export default function Survey({ params }: SurveyProps) {
   }, [sessionId, setLocation]);
 
   useEffect(() => {
-    if (offers && offers.length > 0 && currentStep === 2) {
+    if (offers && offers.length > 0 && currentStep === 3) {
       setCurrentOffers(offers.slice(0, 3)); // Show top 3 offers
     }
   }, [offers, currentStep]);
@@ -197,19 +208,11 @@ export default function Survey({ params }: SurveyProps) {
     // Validate based on current step
     if (currentStep === 1) {
       if (!formData.firstName || !formData.lastName || !formData.birthMonth || 
-          !formData.birthDay || !formData.birthYear || !formData.gender) {
+          !formData.birthDay || !formData.birthYear || !formData.gender ||
+          !formData.address || !formData.city || !formData.state || !formData.zip) {
         toast({
           title: "Required Fields",
           description: "Please fill in all required fields to continue.",
-          variant: "destructive",
-        });
-        return;
-      }
-    } else if (currentStep === 2) {
-      if (!formData.address || !formData.city || !formData.state || !formData.zip) {
-        toast({
-          title: "Address Required", 
-          description: "Please fill in your shipping address to continue.",
           variant: "destructive",
         });
         return;
@@ -218,6 +221,55 @@ export default function Survey({ params }: SurveyProps) {
     
     console.log("Submitting step data:", stepData); // Debug logging
     submitFormMutation.mutate(stepData);
+  };
+
+  // Survey question handlers
+  const handleSurveyAnswer = async (answer: any) => {
+    if (!questions || currentQuestionIndex >= questions.length) return;
+    
+    const currentQuestion = questions[currentQuestionIndex];
+    
+    // Save answer
+    setSurveyAnswers(prev => ({
+      ...prev,
+      [currentQuestion.id]: answer
+    }));
+
+    // Submit answer to backend
+    try {
+      await apiRequest('POST', '/api/user/response', {
+        sessionId: sessionId,
+        questionId: currentQuestion.id,
+        answer: answer
+      });
+
+      // Move to next question or complete survey
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+      } else {
+        // All questions completed, move to step 3
+        setCurrentStep(3);
+        toast({
+          title: "Survey Complete!",
+          description: "Thank you for answering our questions. Now see your offers!",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving survey answer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save your answer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSurveyPrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    } else {
+      setCurrentStep(1);
+    }
   };
 
   const handleOfferClick = (offer: Offer) => {
@@ -241,10 +293,10 @@ export default function Survey({ params }: SurveyProps) {
 
   if (sessionLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-mint-light">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your order...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your order...</p>
         </div>
       </div>
     );
@@ -252,10 +304,10 @@ export default function Survey({ params }: SurveyProps) {
 
   if (!userSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-mint-light">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground mb-4">Session not found or expired.</p>
+            <p className="text-gray-600 mb-4">Session not found or expired.</p>
             <Button onClick={() => setLocation('/register')} data-testid="button-restart">
               Start New Order
             </Button>
@@ -273,7 +325,7 @@ export default function Survey({ params }: SurveyProps) {
             <CardContent className="pt-8 pb-6">
               <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
               <h1 className="text-2xl font-bold mb-2 text-green-800">Order Complete!</h1>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-gray-600 mb-6">
                 Thank you! Your free product order has been successfully processed.
               </p>
               
@@ -295,10 +347,10 @@ export default function Survey({ params }: SurveyProps) {
               </div>
               
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-600">
                   Order ID: #{userSession.sessionId?.slice(-8).toUpperCase()}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-600">
                   You will receive an email confirmation shortly.
                 </p>
               </div>
@@ -334,121 +386,121 @@ export default function Survey({ params }: SurveyProps) {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <h3 className="text-lg font-semibold mb-6">
-              Fill in your details to process your Product Giveaway order
+              Complete your details to claim your free product
             </h3>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstName" className="text-sm font-medium">First Name</Label>
-                <Input
-                  id="firstName"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  placeholder="First Name"
-                  className="mt-1"
-                  data-testid="input-first-name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lastName" className="text-sm font-medium">Last Name</Label>
-                <Input
-                  id="lastName"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  placeholder="Last Name"
-                  className="mt-1"
-                  data-testid="input-last-name"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Month</Label>
-                <Select value={formData.birthMonth} onValueChange={(value) => handleInputChange('birthMonth', value)}>
-                  <SelectTrigger className="mt-1" data-testid="select-birth-month">
-                    <SelectValue placeholder="MM" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {generateMonths().map((month) => (
-                      <SelectItem key={month.value} value={month.value}>
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Day</Label>
-                <Select value={formData.birthDay} onValueChange={(value) => handleInputChange('birthDay', value)}>
-                  <SelectTrigger className="mt-1" data-testid="select-birth-day">
-                    <SelectValue placeholder="DD" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {generateDays().map((day) => (
-                      <SelectItem key={day.value} value={day.value}>
-                        {day.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Year</Label>
-                <Select value={formData.birthYear} onValueChange={(value) => handleInputChange('birthYear', value)}>
-                  <SelectTrigger className="mt-1" data-testid="select-birth-year">
-                    <SelectValue placeholder="YYYY" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {generateYears().map((year) => (
-                      <SelectItem key={year.value} value={year.value}>
-                        {year.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Gender</Label>
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <Button
-                  type="button"
-                  variant={formData.gender === 'female' ? 'default' : 'outline'}
-                  onClick={() => handleInputChange('gender', 'female')}
-                  className="h-12 flex items-center gap-2"
-                  data-testid="button-gender-female"
-                >
-                  <User className="h-4 w-4" />
-                  Female
-                </Button>
-                <Button
-                  type="button"
-                  variant={formData.gender === 'male' ? 'default' : 'outline'}
-                  onClick={() => handleInputChange('gender', 'male')}
-                  className="h-12 flex items-center gap-2"
-                  data-testid="button-gender-male"
-                >
-                  <User className="h-4 w-4" />
-                  Male
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <MapPin className="h-5 w-5" />
-              <h3 className="text-lg font-semibold">Shipping Address</h3>
-            </div>
-            
+            {/* Personal Information */}
             <div className="space-y-4">
+              <h4 className="font-medium text-gray-700">Personal Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName" className="text-sm font-medium">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    placeholder="First Name"
+                    className="mt-1"
+                    data-testid="input-first-name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName" className="text-sm font-medium">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    placeholder="Last Name"
+                    className="mt-1"
+                    data-testid="input-last-name"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Month</Label>
+                  <Select value={formData.birthMonth} onValueChange={(value) => handleInputChange('birthMonth', value)}>
+                    <SelectTrigger className="mt-1" data-testid="select-birth-month">
+                      <SelectValue placeholder="MM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {generateMonths().map((month) => (
+                        <SelectItem key={month.value} value={month.value}>
+                          {month.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Day</Label>
+                  <Select value={formData.birthDay} onValueChange={(value) => handleInputChange('birthDay', value)}>
+                    <SelectTrigger className="mt-1" data-testid="select-birth-day">
+                      <SelectValue placeholder="DD" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {generateDays().map((day) => (
+                        <SelectItem key={day.value} value={day.value}>
+                          {day.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Year</Label>
+                  <Select value={formData.birthYear} onValueChange={(value) => handleInputChange('birthYear', value)}>
+                    <SelectTrigger className="mt-1" data-testid="select-birth-year">
+                      <SelectValue placeholder="YYYY" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {generateYears().map((year) => (
+                        <SelectItem key={year.value} value={year.value}>
+                          {year.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Gender</Label>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <Button
+                    type="button"
+                    variant={formData.gender === 'female' ? 'default' : 'outline'}
+                    onClick={() => handleInputChange('gender', 'female')}
+                    className="h-12 flex items-center gap-2"
+                    data-testid="button-gender-female"
+                  >
+                    <User className="h-4 w-4" />
+                    Female
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.gender === 'male' ? 'default' : 'outline'}
+                    onClick={() => handleInputChange('gender', 'male')}
+                    className="h-12 flex items-center gap-2"
+                    data-testid="button-gender-male"
+                  >
+                    <User className="h-4 w-4" />
+                    Male
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Shipping Address */}
+            <div className="space-y-4 border-t pt-6">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                <h4 className="font-medium text-gray-700">Shipping Address</h4>
+              </div>
+              
               <div>
                 <Label htmlFor="address" className="text-sm font-medium">Street Address</Label>
                 <Input
@@ -511,19 +563,93 @@ export default function Survey({ params }: SurveyProps) {
                 </div>
               </div>
             </div>
+          </div>
+        );
 
+      case 2:
+        // Survey Questions Step
+        if (questionsLoading) {
+          return (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading survey questions...</p>
+            </div>
+          );
+        }
+
+        if (!questions || questions.length === 0) {
+          return (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No survey questions available at this time.</p>
+              <Button 
+                onClick={() => setCurrentStep(3)} 
+                className="mt-4 bg-teal-primary text-white"
+                data-testid="button-skip-survey"
+              >
+                Continue to Offers
+              </Button>
+            </div>
+          );
+        }
+
+        const currentQuestion = questions[currentQuestionIndex];
+        if (!currentQuestion) {
+          return (
+            <div className="text-center py-8">
+              <p className="text-gray-600">Survey complete!</p>
+              <Button 
+                onClick={() => setCurrentStep(3)} 
+                className="mt-4 bg-teal-primary text-white"
+                data-testid="button-continue-to-offers"
+              >
+                Continue to Offers
+              </Button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h3 className="text-lg font-semibold mb-2">Survey Questions</h3>
+              <p className="text-gray-600">
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </p>
+            </div>
+            
+            <SurveyStep
+              question={currentQuestion}
+              onNext={handleSurveyAnswer}
+              onPrevious={handleSurveyPrevious}
+              canGoBack={currentQuestionIndex > 0 || currentStep > 1}
+              isLoading={false}
+            />
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Gift className="h-5 w-5" />
+              <h3 className="text-lg font-semibold">Special Offers & Order Confirmation</h3>
+            </div>
+            
             {/* Special Offers Section */}
             {currentOffers.length > 0 && (
-              <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="mb-8 p-6 bg-teal-50 rounded-lg border border-teal-200">
                 <div className="flex items-center gap-2 mb-4">
-                  <Gift className="h-5 w-5 text-blue-600" />
-                  <h4 className="font-semibold text-blue-800">Special Offers Just for You!</h4>
+                  <Gift className="h-5 w-5 text-teal-600" />
+                  <h4 className="font-semibold text-teal-800">Special Offers Just for You!</h4>
                 </div>
+                <p className="text-sm text-teal-700 mb-4">
+                  Complete these offers to earn rewards and qualify for additional benefits!
+                </p>
                 <div className="space-y-3">
                   {currentOffers.map((offer) => (
                     <div 
                       key={offer.id} 
-                      className="bg-white border border-blue-200 rounded-lg p-4"
+                      className="bg-white border border-teal-200 rounded-lg p-4"
                       data-testid={`offer-${offer.id}`}
                     >
                       <div className="flex items-start justify-between mb-2">
@@ -537,7 +663,7 @@ export default function Survey({ params }: SurveyProps) {
                       </p>
                       <Button 
                         size="sm" 
-                        className="w-full"
+                        className="w-full bg-teal-primary text-white hover:bg-teal-600"
                         onClick={() => handleOfferClick(offer)}
                         data-testid={`button-offer-${offer.id}`}
                       >
@@ -549,19 +675,13 @@ export default function Survey({ params }: SurveyProps) {
                 </div>
               </div>
             )}
-          </div>
-        );
 
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CreditCard className="h-5 w-5" />
-              <h3 className="text-lg font-semibold">Order Confirmation</h3>
-            </div>
-            
+            {/* Order Summary */}
             <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-              <h4 className="font-medium">Order Summary</h4>
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="h-5 w-5" />
+                <h4 className="font-medium">Order Summary</h4>
+              </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Customer:</span>
@@ -607,154 +727,59 @@ export default function Survey({ params }: SurveyProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50" data-testid="survey-page">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2 text-gray-900">Free Product Giveaway</h1>
-            <p className="text-xl text-gray-600 mb-4">Claim Your Free Item Today</p>
-            
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="flex items-center gap-2 text-pink-600">
-                <span className="text-2xl">🎁</span>
-                <span className="font-semibold">Limited Supply</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-gray-600" />
-                <span className="font-medium">Time Remaining</span>
-              </div>
-            </div>
-            
-            {/* Countdown Timer */}
-            <div className="text-2xl font-bold text-red-600 mb-6">
-              {String(countdown.hours).padStart(2, '0')}:
-              {String(countdown.minutes).padStart(2, '0')}:
-              {String(countdown.seconds).padStart(2, '0')}
-            </div>
-
-            {/* Progress Indicator */}
-            <ProgressBar current={currentStep} total={3} className="mb-8" />
+    <div className="min-h-screen bg-mint-light" data-testid="survey-page">
+      {/* Header */}
+      <header className="bg-teal-primary text-white">
+        <div className="flex justify-between items-center px-6 py-4">
+          <img 
+            src={brandLogo} 
+            alt="Free Finds" 
+            className="h-12" 
+            data-testid="brand-logo"
+          />
+          <div className="text-center">
+            <h1 className="text-xl font-bold" data-testid="survey-title">
+              Survey - Step {currentStep} of 3
+            </h1>
+            <p className="text-sm">Complete the survey to claim your free item</p>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* Left Column - Cart Summary */}
-            <div className="space-y-6">
-              <Card className="border-2 border-pink-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <ShoppingCart className="h-5 w-5" />
-                    <h3 className="text-lg font-semibold">Cart Summary</h3>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span>Original Price</span>
-                      <span className="line-through text-gray-500">$15.00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Product Cost</span>
-                      <span className="font-bold text-green-600">$0.00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span className="font-bold text-green-600">FREE</span>
-                    </div>
-                    <div className="border-t pt-2">
-                      <div className="flex justify-between text-green-600">
-                        <span>You save</span>
-                        <span className="font-bold">$15.00</span>
-                      </div>
-                    </div>
-                    <div className="border-t pt-2">
-                      <div className="flex justify-between text-lg font-bold">
-                        <span>Total Cost</span>
-                        <span className="text-green-600">$0.00</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Product Image */}
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="relative inline-block">
-                    <img 
-                      src={productImage} 
-                      alt="Pink branded slides - free giveaway product"
-                      className="w-full max-w-sm mx-auto rounded-lg shadow-md"
-                    />
-                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
-                      <CheckCircle className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">*Representative image only</p>
-                </CardContent>
-              </Card>
-
-              {/* Revenue Tracking */}
-              {userRevenue > 0 && (
-                <Card className="border-2 border-green-200">
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
-                      Your Rewards
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Current Earnings:</span>
-                        <span className="font-bold text-lg text-green-600">
-                          ${userRevenue.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-3">
-                        <div 
-                          className="bg-green-500 h-3 rounded-full transition-all duration-300" 
-                          style={{ width: `${Math.min((userRevenue / 3.0) * 100, 100)}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {userRevenue >= 3.0 
-                          ? "🎉 Reward threshold reached!"
-                          : `$${(3.0 - userRevenue).toFixed(2)} remaining to unlock rewards`
-                        }
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Right Column - Form */}
-            <div className="space-y-6">
-              <Card className="border-2 border-blue-200">
-                <CardContent className="p-6">
-                  {renderStepContent()}
-
-                  <Button
-                    onClick={handleContinue}
-                    disabled={submitFormMutation.isPending}
-                    className="w-full h-12 text-lg font-semibold bg-green-600 hover:bg-green-700 mt-6"
-                    data-testid="button-continue"
-                  >
-                    {submitFormMutation.isPending ? "Processing..." : 
-                     currentStep === 3 ? "Complete Order" : "Continue"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Footer */}
-              <p className="text-center text-sm text-gray-600">
-                Limited To One Per Household
-              </p>
-            </div>
+          <div className="bg-green-500 px-3 py-1 rounded-full text-sm" data-testid="step-indicator">
+            📝 Step {currentStep}/3
           </div>
         </div>
+      </header>
+
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-gray-200 py-4">
+        <div className="max-w-md mx-auto px-4">
+          <ProgressBar current={currentStep} total={3} />
+        </div>
       </div>
+
+      {/* Main Content */}
+      <main className="flex justify-center py-8">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full mx-4">
+          <div className="mb-6">{renderStepContent()}</div>
+
+          {/* Continue Button */}
+          {currentStep !== 2 && (
+            <Button 
+              onClick={handleContinue}
+              disabled={submitFormMutation.isPending}
+              className="w-full bg-teal-primary text-white py-3 rounded-lg font-bold text-lg hover:bg-opacity-90 transition-colors"
+              data-testid="button-continue"
+            >
+              {submitFormMutation.isPending ? 'Saving...' : 
+               currentStep === 3 ? 'Complete Order' : 'Continue →'}
+            </Button>
+          )}
+        </div>
+      </main>
+      
+      {/* Footer */}
+      <footer className="text-center py-4 text-gray-500 text-sm">
+        Limited To One Per Household
+      </footer>
     </div>
   );
 }
