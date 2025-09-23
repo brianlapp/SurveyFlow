@@ -35,10 +35,18 @@ export default function ExitLottery({ params }: ExitLotteryProps) {
   const [hasSpun, setHasSpun] = useState(false);
   const [spinAngle, setSpinAngle] = useState(0);
 
+  // Fetch user session to validate survey completion
+  const { data: userSession, isLoading: sessionLoading } = useQuery({
+    queryKey: ['/api/user/session', sessionId],
+    queryFn: () => apiRequest('GET', `/api/user/session/${sessionId}`).then(res => res.json()),
+    enabled: !!sessionId,
+  });
+
   // Fetch exit offers
   const { data: exitOffers, isLoading: exitOffersLoading } = useQuery<PublicOffer[]>({
     queryKey: ['/api/offers/exit'],
     queryFn: () => apiRequest('GET', '/api/offers/exit').then(res => res.json()),
+    enabled: !!sessionId && !!userSession?.surveyCompleted, // Only fetch if survey completed
   });
 
   // Offer interaction mutation
@@ -84,7 +92,7 @@ export default function ExitLottery({ params }: ExitLotteryProps) {
     },
   });
 
-  // Enhanced session validation and navigation guard  
+  // Enhanced session validation with server-side survey completion check
   useEffect(() => {
     if (!sessionId) {
       console.warn('No session ID provided for exit lottery, redirecting to registration');
@@ -92,19 +100,36 @@ export default function ExitLottery({ params }: ExitLotteryProps) {
       return;
     }
     
-    // Check if this session completed the survey
-    const savedSessionId = localStorage.getItem('surveySessionId');
-    if (!savedSessionId || savedSessionId !== sessionId) {
-      console.warn('Invalid or mismatched session ID for exit lottery, redirecting to registration');
+    // Wait for session data to load before validation
+    if (sessionLoading) return;
+    
+    // Check server-side survey completion (authoritative)
+    if (!userSession) {
+      console.warn('Session not found on server, redirecting to registration');
+      localStorage.removeItem('surveySessionId');
       toast({
-        title: "Session Required",
-        description: "Please complete the survey first to access the exit lottery.",
+        title: "Session Not Found",
+        description: "Please start a new survey to access the exit lottery.",
         variant: "destructive",
       });
       setTimeout(() => setLocation('/register'), 2000);
       return;
     }
-  }, [sessionId, setLocation, toast]);
+    
+    // Verify survey is actually completed on server
+    if (!userSession.surveyCompleted) {
+      console.warn('Survey not completed on server, redirecting back to survey');
+      toast({
+        title: "Survey Incomplete",
+        description: "Please complete the survey first to access the exit lottery.",
+        variant: "destructive",
+      });
+      setTimeout(() => setLocation(`/survey/${sessionId}`), 2000);
+      return;
+    }
+    
+    console.log('Exit lottery access validated - survey completed');
+  }, [sessionId, userSession, sessionLoading, setLocation, toast]);
 
   const handleSpin = () => {
     if (!exitOffers || exitOffers.length === 0 || isSpinning || hasSpun) return;
@@ -146,6 +171,10 @@ export default function ExitLottery({ params }: ExitLotteryProps) {
       offerId: offer.id,
       interactionType: 'click',
     });
+    
+    // Clean up tracking data since flow is complete
+    localStorage.removeItem('surveyTrackingInfo');
+    localStorage.removeItem('surveySessionId');
     
     // Open offer in new tab
     window.open(offer.clickUrl || '#', '_blank');

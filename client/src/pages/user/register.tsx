@@ -114,18 +114,28 @@ export default function Register() {
       return await response.json();
     },
     onSuccess: (data) => {
-      // Clear tracking info from localStorage since registration is complete
-      localStorage.removeItem('surveyTrackingInfo');
-      
       // Store session info for the flow
       localStorage.setItem('surveySessionId', data.sessionId);
+      
+      // Preserve tracking info throughout the entire flow (don't remove yet)
+      const trackingData = localStorage.getItem('surveyTrackingInfo');
+      if (trackingData) {
+        try {
+          const parsed = JSON.parse(trackingData);
+          // Update with actual server session ID
+          parsed.serverSessionId = data.sessionId;
+          localStorage.setItem('surveyTrackingInfo', JSON.stringify(parsed));
+        } catch (error) {
+          console.warn('Failed to update tracking info with server session ID:', error);
+        }
+      }
       
       toast({
         title: "Registration Successful",
         description: "Welcome! Let's get started with your survey.",
       });
       
-      // Navigate to survey with session ID and preserve tracking params if needed
+      // Navigate to survey with session ID and preserve tracking params
       const urlParams = new URLSearchParams(window.location.search);
       const surveyUrl = `/survey/${data.sessionId}`;
       const trackingParams = new URLSearchParams();
@@ -433,6 +443,7 @@ export default function Register() {
                             type="tel"
                             placeholder="(555) 123-4567" 
                             {...field} 
+                            value={field.value || ''}
                             data-testid="input-phone"
                           />
                         </FormControl>

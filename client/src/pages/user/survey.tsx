@@ -105,12 +105,24 @@ export default function Survey({ params }: SurveyProps) {
     return () => clearInterval(timer);
   }, []);
 
-  // Load user data into form when session loads (but preserve step progression)
+  // Load user data and enforce server-authoritative step progression
   useEffect(() => {
     if (userSession) {
-      // Only update currentStep if it's the initial load or if server is ahead
+      // Use server as source of truth for step progression - no Math.max
       const serverStep = userSession.currentQuestionIndex || 1;
-      setCurrentStep(prevStep => Math.max(prevStep, serverStep));
+      
+      // Validate step progression based on actual completion
+      let allowedStep = 1;
+      if (userSession.firstName && userSession.lastName && userSession.address) {
+        allowedStep = 2; // Personal info completed
+      }
+      if (userSession.surveyCompleted) {
+        allowedStep = 3; // Survey questions completed
+      }
+      
+      // Use the minimum of server step and allowed step for security
+      const validStep = Math.min(serverStep, allowedStep);
+      setCurrentStep(validStep);
       
       setUserRevenue(parseFloat(userSession.totalRevenue?.toString() || '0'));
       setFormData(prev => ({
@@ -124,7 +136,7 @@ export default function Survey({ params }: SurveyProps) {
         zip: userSession.zip || "",
         phone: userSession.phone || ""
       }));
-      console.log(`Session sync: server step ${serverStep}, keeping local step at ${Math.max(currentStep, serverStep)}`); // Debug
+      console.log(`Session sync: server step ${serverStep}, allowed step ${allowedStep}, setting step to ${validStep}`);
     }
   }, [userSession]);
 
@@ -147,13 +159,24 @@ export default function Survey({ params }: SurveyProps) {
           description: `Step ${currentStep} completed successfully!`,
         });
       } else {
-        // Step 3 completed - redirect to exit lottery
+        // Step 3 completed - redirect to exit lottery with tracking preservation
         toast({
           title: "Order Complete!",
           description: "Redirecting to your final bonus opportunity...",
         });
+        
+        // Preserve tracking parameters for exit lottery
+        const currentParams = new URLSearchParams(window.location.search);
+        const exitUrl = `/exit/${sessionId}`;
+        const trackingParams = new URLSearchParams();
+        
+        if (currentParams.get('source')) trackingParams.set('source', currentParams.get('source')!);
+        if (currentParams.get('sub_source')) trackingParams.set('sub_source', currentParams.get('sub_source')!);
+        
+        const finalExitUrl = trackingParams.toString() ? `${exitUrl}?${trackingParams.toString()}` : exitUrl;
+        
         setTimeout(() => {
-          setLocation(`/exit/${sessionId}`);
+          setLocation(finalExitUrl);
         }, 2000); // 2 second delay to show completion message
       }
       // Invalidate session query to refresh data (after a small delay to prevent race condition)
