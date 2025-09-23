@@ -41,8 +41,8 @@ function Router() {
       {isAuthenticated ? (
         <AdminLayout>
           <Switch>
+            <Route path="/" component={Dashboard} />
             <Route path="/admin" component={Dashboard} />
-            <Route path="/admin/dashboard" component={Dashboard} />
             <Route path="/admin/users" component={Users} />
             <Route path="/admin/offers" component={Offers} />
             <Route path="/admin/questions" component={Questions} />
@@ -54,11 +54,8 @@ function Router() {
           </Switch>
         </AdminLayout>
       ) : (
-        <Route path="/admin-login" component={Landing} />
+        <Route path="/" component={Landing} />
       )}
-      
-      {/* Default route - start user flow */}
-      <Route path="/" component={GiveawayLanding} />
       
       <Route component={NotFound} />
     </Switch>
