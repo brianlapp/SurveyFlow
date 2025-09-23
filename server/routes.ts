@@ -512,8 +512,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const offers = await storage.getOffers(true); // Active offers only
       
+      // Filter for main offers only (exclude exit offers)
+      const mainOffers = offers.filter(offer => offer.offerType !== 'exit');
+      
       // Only return safe public fields for the survey
-      const publicOffers = offers.map(offer => ({
+      const publicOffers = mainOffers.map(offer => ({
         id: offer.id,
         name: offer.name,
         description: offer.description,
@@ -529,6 +532,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching public offers:", error);
       res.status(500).json({ message: "Failed to fetch offers" });
+    }
+  });
+
+  // Exit offers endpoint for lottery system
+  app.get('/api/offers/exit', async (req, res) => {
+    try {
+      const offers = await storage.getOffers(true); // Active offers only
+      
+      // Filter for exit offers only
+      const exitOffers = offers.filter(offer => offer.offerType === 'exit');
+      
+      // Return safe public fields for exit lottery
+      const publicExitOffers = exitOffers.map(offer => ({
+        id: offer.id,
+        name: offer.name,
+        description: offer.description,
+        imageUrl: offer.imageUrl,
+        clickUrl: offer.clickUrl,
+        category: offer.category,
+        position: offer.position,
+        offerType: offer.offerType,
+        rating: offer.rating || 4.5,
+        originalPrice: offer.originalPrice || '$100.00',
+        discountPrice: offer.discountPrice || '$25.00',
+      }));
+      
+      res.json(publicExitOffers);
+    } catch (error) {
+      console.error("Error fetching exit offers:", error);
+      res.status(500).json({ message: "Failed to fetch exit offers" });
     }
   });
 
@@ -551,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate input using Zod schema - NO revenue from client!
       const interactionSchema = z.object({
         offerId: z.string().uuid("Invalid offer ID"),
-        interactionType: z.enum(['view', 'click'], { message: "Only view and click allowed from client" }),
+        interactionType: z.enum(['view', 'click', 'spin'], { message: "Only view, click, and spin allowed from client" }),
         pageNumber: z.number().min(1).max(100, "Invalid page number").optional(),
       });
 

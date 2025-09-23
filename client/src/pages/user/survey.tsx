@@ -147,11 +147,14 @@ export default function Survey({ params }: SurveyProps) {
           description: `Step ${currentStep} completed successfully!`,
         });
       } else {
-        setIsCompleted(true);
+        // Step 3 completed - redirect to exit lottery
         toast({
-          title: "Success!",
-          description: "Your free product order has been processed!",
+          title: "Order Complete!",
+          description: "Redirecting to your final bonus opportunity...",
         });
+        setTimeout(() => {
+          setLocation(`/exit/${sessionId}`);
+        }, 2000); // 2 second delay to show completion message
       }
       // Invalidate session query to refresh data (after a small delay to prevent race condition)
       setTimeout(() => {
@@ -878,7 +881,7 @@ export default function Survey({ params }: SurveyProps) {
               data-testid="button-continue"
             >
               {submitFormMutation.isPending ? 'Saving...' : 
-               currentStep === 3 ? 'Complete Order' : 'Continue →'}
+               currentStep === 3 ? 'Complete Order & Get Bonus' : 'Continue →'}
             </Button>
           )}
         </div>

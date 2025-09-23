@@ -18,6 +18,7 @@ import Settings from "@/pages/admin/settings";
 import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
+import ExitLottery from "@/pages/user/exit-lottery";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/giveaway" component={GiveawayLanding} />
       <Route path="/register" component={Register} />
       <Route path="/survey/:sessionId?" component={Survey} />
+      <Route path="/exit/:sessionId?" component={ExitLottery} />
       
       {/* Admin routes */}
       {isAuthenticated ? (
