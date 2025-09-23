@@ -103,6 +103,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin giveaway management routes
+  app.get('/api/admin/giveaways', isAuthenticated, async (req, res) => {
+    try {
+      const giveaways = await storage.getGiveaways();
+      res.json(giveaways);
+    } catch (error) {
+      console.error("Error fetching giveaways:", error);
+      res.status(500).json({ message: "Failed to fetch giveaways" });
+    }
+  });
+
+  app.post('/api/admin/giveaways', isAuthenticated, async (req, res) => {
+    try {
+      const giveawaySchema = z.object({
+        title: z.string().min(1, "Title is required"),
+        imageUrl: z.string().url("Valid image URL is required"),
+        retailValue: z.string().regex(/^\d+(\.\d{1,2})?$/, "Valid price required"),
+        shippingValue: z.string().regex(/^\d+(\.\d{1,2})?$/, "Valid price required").optional(),
+        countdownHours: z.number().min(1).max(72).optional(),
+        isActive: z.boolean().optional(),
+      });
+
+      const validatedData = giveawaySchema.parse(req.body);
+      const giveaway = await storage.createGiveaway(validatedData);
+      res.json(giveaway);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating giveaway:", error);
+      res.status(500).json({ message: "Failed to create giveaway" });
+    }
+  });
+
+  app.put('/api/admin/giveaways/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updateSchema = z.object({
+        title: z.string().min(1).optional(),
+        imageUrl: z.string().url().optional(),
+        retailValue: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+        shippingValue: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+        countdownHours: z.number().min(1).max(72).optional(),
+        isActive: z.boolean().optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+      const giveaway = await storage.updateGiveaway(id, validatedData);
+      res.json(giveaway);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating giveaway:", error);
+      res.status(500).json({ message: "Failed to update giveaway" });
+    }
+  });
+
+  app.delete('/api/admin/giveaways/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteGiveaway(id);
+      res.json({ message: "Giveaway deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting giveaway:", error);
+      res.status(500).json({ message: "Failed to delete giveaway" });
+    }
+  });
+
   app.post('/api/user/update-profile', async (req, res) => {
     try {
       // Security: Use sessionId instead of accepting endUserId from client
