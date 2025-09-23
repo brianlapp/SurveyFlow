@@ -8,6 +8,7 @@ import {
   postbacks,
   dailyStats,
   settings,
+  giveaways,
   type User,
   type UpsertUser,
   type EndUser,
@@ -20,6 +21,8 @@ import {
   type InsertResponse,
   type OfferInteraction,
   type InsertOfferInteraction,
+  type Giveaway,
+  type InsertGiveaway,
   type Postback,
   type DailyStat,
   type Setting,
@@ -73,6 +76,13 @@ export interface IStorage {
   // Analytics operations
   getDailyStats(startDate: Date, endDate: Date): Promise<DailyStat[]>;
   createOrUpdateDailyStats(date: Date, stats: Partial<DailyStat>): Promise<DailyStat>;
+  
+  // Giveaway operations
+  createGiveaway(giveaway: InsertGiveaway): Promise<Giveaway>;
+  getActiveGiveaway(): Promise<Giveaway | undefined>;
+  getGiveaways(): Promise<Giveaway[]>;
+  updateGiveaway(id: string, data: Partial<Giveaway>): Promise<Giveaway>;
+  deleteGiveaway(id: string): Promise<void>;
   getDashboardMetrics(): Promise<{
     todayRevenue: number;
     activeUsers: number;
@@ -449,6 +459,39 @@ export class DatabaseStorage implements IStorage {
 
   async getSettings(): Promise<Setting[]> {
     return await db.select().from(settings).orderBy(settings.key);
+  }
+
+  // Giveaway operations
+  async createGiveaway(giveaway: InsertGiveaway): Promise<Giveaway> {
+    const [newGiveaway] = await db.insert(giveaways).values(giveaway).returning();
+    return newGiveaway;
+  }
+
+  async getActiveGiveaway(): Promise<Giveaway | undefined> {
+    const [giveaway] = await db
+      .select()
+      .from(giveaways)
+      .where(eq(giveaways.isActive, true))
+      .orderBy(desc(giveaways.createdAt))
+      .limit(1);
+    return giveaway;
+  }
+
+  async getGiveaways(): Promise<Giveaway[]> {
+    return await db.select().from(giveaways).orderBy(desc(giveaways.createdAt));
+  }
+
+  async updateGiveaway(id: string, data: Partial<Giveaway>): Promise<Giveaway> {
+    const [giveaway] = await db
+      .update(giveaways)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(giveaways.id, id))
+      .returning();
+    return giveaway;
+  }
+
+  async deleteGiveaway(id: string): Promise<void> {
+    await db.delete(giveaways).where(eq(giveaways.id, id));
   }
 }
 

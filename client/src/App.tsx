@@ -17,6 +17,7 @@ import Brands from "@/pages/admin/brands";
 import Settings from "@/pages/admin/settings";
 import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
+import GiveawayLanding from "@/pages/user/giveaway-landing";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,6 +33,7 @@ function Router() {
   return (
     <Switch>
       {/* Public routes */}
+      <Route path="/giveaway" component={GiveawayLanding} />
       <Route path="/register" component={Register} />
       <Route path="/survey/:sessionId?" component={Survey} />
       

@@ -89,6 +89,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Giveaway routes (public)
+  app.get('/api/giveaways/active', async (req, res) => {
+    try {
+      const giveaway = await storage.getActiveGiveaway();
+      if (!giveaway) {
+        return res.status(404).json({ message: "No active giveaway found" });
+      }
+      res.json(giveaway);
+    } catch (error) {
+      console.error("Error fetching active giveaway:", error);
+      res.status(500).json({ message: "Failed to fetch active giveaway" });
+    }
+  });
+
   app.post('/api/user/update-profile', async (req, res) => {
     try {
       // Security: Use sessionId instead of accepting endUserId from client
