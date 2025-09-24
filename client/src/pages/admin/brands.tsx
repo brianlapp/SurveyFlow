@@ -129,7 +129,7 @@ function GiveawayManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingGiveaway) {
-      updateMutation.mutate({ id: editingGiveaway.id, ...formData });
+      updateMutation.mutate({ id: (editingGiveaway as any).id, ...formData });
     } else {
       createMutation.mutate(formData);
     }
@@ -260,7 +260,7 @@ function GiveawayManagement() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             <p className="text-muted-foreground mt-2">Loading giveaways...</p>
           </div>
-        ) : giveaways.length === 0 ? (
+        ) : (giveaways as any[]).length === 0 ? (
           <div className="text-center py-8">
             <Gift className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-medium text-lg mb-2">No Giveaways Created</h3>
@@ -510,7 +510,7 @@ export default function Brands() {
                 variant="secondary" 
                 className="flex-1" 
                 data-testid="button-preview-modefree"
-                onClick={() => window.open('/', '_blank')}
+                onClick={() => window.open('/giveaway', '_blank')}
               >
                 <Eye className="h-4 w-4 mr-1" />
                 Preview
