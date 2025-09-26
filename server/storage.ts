@@ -60,6 +60,7 @@ export interface IStorage {
   
   // Response operations
   createResponse(response: InsertResponse): Promise<Response>;
+  upsertResponse(response: InsertResponse): Promise<Response>;
   getResponsesByUser(endUserId: string): Promise<Response[]>;
   getUserResponseCount(endUserId: string): Promise<number>;
   
@@ -248,6 +249,20 @@ export class DatabaseStorage implements IStorage {
   async createResponse(response: InsertResponse): Promise<Response> {
     const [newResponse] = await db.insert(responses).values(response).returning();
     return newResponse;
+  }
+
+  async upsertResponse(response: InsertResponse): Promise<Response> {
+    const [upsertedResponse] = await db
+      .insert(responses)
+      .values(response)
+      .onConflictDoUpdate({
+        target: [responses.endUserId, responses.questionId],
+        set: {
+          answer: response.answer,
+        },
+      })
+      .returning();
+    return upsertedResponse;
   }
 
   async getResponsesByUser(endUserId: string): Promise<Response[]> {

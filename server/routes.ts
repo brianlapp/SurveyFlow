@@ -417,18 +417,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Session not found" });
       }
 
+      // Check if survey is already completed
+      if (endUser.surveyCompleted) {
+        return res.status(400).json({ message: "Survey already completed" });
+      }
+
       // Validate input using Zod schema
       const responseSchema = z.object({
         questionId: z.string().uuid("Invalid question ID"),
-        answer: z.any(), // Allow any answer type
+        answer: z.string().min(1, "Answer is required"),
       });
 
       const validatedData = responseSchema.parse({ questionId, answer });
 
-      // Verify question exists
+      // Verify question exists and get details
       const question = await storage.getQuestion(validatedData.questionId);
-      if (!question) {
-        return res.status(404).json({ message: "Question not found" });
+      if (!question || !question.isActive) {
+        return res.status(404).json({ message: "Question not found or inactive" });
+      }
+
+      // Validate answer against question options
+      if (question.type === 'multiple_choice' || question.type === 'yes_no') {
+        const validOptions = question.options as string[];
+        if (!validOptions || !validOptions.includes(validatedData.answer)) {
+          return res.status(400).json({ 
+            message: "Invalid answer for this question",
+            validOptions: validOptions
+          });
+        }
       }
 
       const responseData = {
@@ -437,23 +453,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         answer: validatedData.answer,
       };
       
-      const response = await storage.createResponse(responseData);
+      // Get total active questions and enforce sequence
+      const allQuestions = await storage.getQuestions();
+      const activeQuestions = allQuestions.filter(q => q.isActive).sort((a, b) => a.orderIndex - b.orderIndex);
+      const totalQuestions = activeQuestions.length;
       
-      // Update user's current question index
+      // Get current progress based on actual distinct responses
+      const userResponseCount = await storage.getUserResponseCount(endUser.id);
+      const currentIndex = Math.min(userResponseCount, totalQuestions - 1);
+      
+      // Enforce sequence: user must answer questions in order
+      if (currentIndex < totalQuestions && activeQuestions[currentIndex].id !== validatedData.questionId) {
+        return res.status(409).json({
+          message: "Questions must be answered in sequence",
+          expectedQuestionId: activeQuestions[currentIndex].id,
+          currentQuestionIndex: currentIndex
+        });
+      }
+      
+      // Upsert response (update if exists, create if new)
+      const response = await storage.upsertResponse(responseData);
+      
+      // Recalculate progress based on actual distinct responses
+      const updatedResponseCount = await storage.getUserResponseCount(endUser.id);
+      const newQuestionIndex = Math.min(updatedResponseCount, totalQuestions);
+      const surveyCompleted = newQuestionIndex >= totalQuestions;
+      
       await storage.updateEndUser(endUser.id, {
-        currentQuestionIndex: endUser.currentQuestionIndex + 1
+        currentQuestionIndex: newQuestionIndex,
+        surveyCompleted: surveyCompleted
       });
       
-      // Check if user should see offers on this page
-      const currentPage = Math.ceil((endUser.currentQuestionIndex + 1) / 1); // Assuming 1 question per page
-      const offers = await storage.getOffersByPage(currentPage);
+      // Determine next action
+      let nextAction = 'next_question';
+      let offers: any[] = [];
       
-      res.json({ response, offers });
+      if (surveyCompleted) {
+        nextAction = 'show_offers';
+        // Get offers for the completed survey
+        offers = await storage.getOffersByPage(3); // Step 3 = offers page
+      }
+      
+      res.json({ 
+        response, 
+        nextAction,
+        surveyCompleted,
+        currentQuestionIndex: newQuestionIndex,
+        totalQuestions,
+        offers 
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid input data", errors: error.errors });
       }
       console.error("Error creating response:", error);
+      
+      // Handle unique constraint violation gracefully
+      if (error.message?.includes('unique_user_question')) {
+        return res.status(409).json({ message: "Response already exists for this question" });
+      }
+      
       res.status(400).json({ message: "Invalid response data" });
     }
   });
