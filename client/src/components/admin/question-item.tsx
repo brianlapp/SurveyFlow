@@ -10,9 +10,10 @@ import type { Question } from "@shared/schema";
 interface QuestionItemProps {
   question: Question;
   index: number;
+  onEdit?: (question: Question) => void;
 }
 
-export function QuestionItem({ question, index }: QuestionItemProps) {
+export function QuestionItem({ question, index, onEdit }: QuestionItemProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -117,6 +118,7 @@ export function QuestionItem({ question, index }: QuestionItemProps) {
         <Button 
           variant="ghost" 
           size="sm"
+          onClick={() => onEdit?.(question)}
           data-testid="button-edit-question"
         >
           <Edit className="h-4 w-4" />

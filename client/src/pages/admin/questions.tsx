@@ -28,6 +28,7 @@ export default function Questions() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showBatchGenerateModal, setShowBatchGenerateModal] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [filters, setFilters] = useState({
     category: 'all',
     search: '',
@@ -54,6 +55,32 @@ export default function Questions() {
       toast({
         title: "Success",
         description: "Question created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateQuestionMutation = useMutation({
+    mutationFn: async ({ id, ...data }: CreateQuestionForm & { id: string }) => {
+      const payload = {
+        ...data,
+        options: data.type === 'text' ? null : data.options,
+      };
+      await apiRequest('PUT', `/api/questions/${id}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
+      setShowCreateModal(false);
+      setEditingQuestion(null);
+      toast({
+        title: "Success",
+        description: "Question updated successfully",
       });
     },
     onError: (error) => {
@@ -165,11 +192,32 @@ export default function Questions() {
   const watchOptions = form.watch('options') || [''];
 
   const onSubmit = (data: CreateQuestionForm) => {
-    const orderIndex = questions?.length || 0;
-    createQuestionMutation.mutate({
-      ...data,
-      orderIndex,
+    if (editingQuestion) {
+      updateQuestionMutation.mutate({
+        id: editingQuestion.id,
+        ...data,
+      });
+    } else {
+      const orderIndex = questions?.length || 0;
+      createQuestionMutation.mutate({
+        ...data,
+        orderIndex,
+      });
+    }
+  };
+
+  const handleEdit = (question: any) => {
+    setEditingQuestion(question);
+    form.reset({
+      text: question.text,
+      type: question.type,
+      category: question.category || '',
+      isRequired: question.isRequired,
+      isActive: question.isActive,
+      orderIndex: question.orderIndex,
+      options: question.options || [''],
     });
+    setShowCreateModal(true);
   };
 
   const onGenerateSubmit = (data: any) => {
@@ -297,7 +345,7 @@ export default function Questions() {
           ) : (
             <div className="space-y-4">
               {filteredQuestions.map((question: any, index: number) => (
-                <QuestionItem key={question.id} question={question} index={index} />
+                <QuestionItem key={question.id} question={question} index={index} onEdit={handleEdit} />
               ))}
               
               {filteredQuestions.length === 0 && (
@@ -313,10 +361,16 @@ export default function Questions() {
       </Card>
 
       {/* Create Question Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+      <Dialog open={showCreateModal} onOpenChange={(open) => {
+        setShowCreateModal(open);
+        if (!open) {
+          setEditingQuestion(null);
+          form.reset();
+        }
+      }}>
         <DialogContent className="max-w-2xl" data-testid="modal-create-question">
           <DialogHeader>
-            <DialogTitle>Add New Question</DialogTitle>
+            <DialogTitle>{editingQuestion ? 'Edit Question' : 'Add New Question'}</DialogTitle>
           </DialogHeader>
           
           <Form {...form}>
@@ -473,10 +527,13 @@ export default function Questions() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={createQuestionMutation.isPending}
+                  disabled={createQuestionMutation.isPending || updateQuestionMutation.isPending}
                   data-testid="button-create-question-submit"
                 >
-                  {createQuestionMutation.isPending ? 'Creating...' : 'Create Question'}
+                  {(createQuestionMutation.isPending || updateQuestionMutation.isPending) ? 
+                    (editingQuestion ? 'Updating...' : 'Creating...') : 
+                    (editingQuestion ? 'Update Question' : 'Create Question')
+                  }
                 </Button>
               </div>
             </form>
