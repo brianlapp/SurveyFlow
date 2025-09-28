@@ -58,6 +58,7 @@ export default function Survey({ params }: SurveyProps) {
   const [userRevenue, setUserRevenue] = useState(0);
   const [countdown, setCountdown] = useState({ hours: 7, minutes: 10, seconds: 20 });
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isCompletingOrder, setIsCompletingOrder] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [surveyAnswers, setSurveyAnswers] = useState<Record<string, any>>({});
 
@@ -107,22 +108,22 @@ export default function Survey({ params }: SurveyProps) {
 
   // Load user data and enforce server-authoritative step progression
   useEffect(() => {
-    if (userSession) {
-      // Use server as source of truth for step progression - no Math.max
-      const serverStep = userSession.currentQuestionIndex || 1;
+    if (userSession && !isCompletingOrder) {
+      // Determine correct step based on user data completion status
+      let validStep = 1;
       
-      // Validate step progression based on actual completion
-      let allowedStep = 1;
+      // Step 1: Personal info required
       if (userSession.firstName && userSession.lastName && userSession.address) {
-        allowedStep = 2; // Personal info completed
-      }
-      if (userSession.surveyCompleted) {
-        allowedStep = 3; // Survey questions completed
+        validStep = 2; // Personal info completed, move to questions
       }
       
-      // Use the minimum of server step and allowed step for security
-      const validStep = Math.min(serverStep, allowedStep);
+      // Step 2: Survey questions completed
+      if (userSession.surveyCompleted) {
+        validStep = 3; // Survey completed, move to offers
+      }
+      
       setCurrentStep(validStep);
+      setCurrentQuestionIndex(userSession.currentQuestionIndex || 0);
       
       setUserRevenue(parseFloat(userSession.totalRevenue?.toString() || '0'));
       setFormData(prev => ({
@@ -136,9 +137,9 @@ export default function Survey({ params }: SurveyProps) {
         zip: userSession.zip || "",
         phone: userSession.phone || ""
       }));
-      console.log(`Session sync: server step ${serverStep}, allowed step ${allowedStep}, setting step to ${validStep}`);
+      console.log(`Session sync: user completion status -> step ${validStep}, question index ${userSession.currentQuestionIndex || 0}`);
     }
-  }, [userSession]);
+  }, [userSession, isCompletingOrder]);
 
   // Submit form mutation
   const submitFormMutation = useMutation({
@@ -278,6 +279,38 @@ export default function Survey({ params }: SurveyProps) {
   };
 
   const handleContinue = () => {
+    // Step 3 (Offers) should complete the order without updating profile
+    if (currentStep === 3) {
+      // Set completion state to prevent session sync interference
+      setIsCompletingOrder(true);
+      
+      // Invalidate session cache before redirect to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/user/session'] });
+      
+      // Complete the order and redirect to exit lottery
+      toast({
+        title: "Order Complete!",
+        description: "Redirecting to your final bonus opportunity...",
+      });
+      
+      // Preserve tracking parameters for exit lottery
+      const currentParams = new URLSearchParams(window.location.search);
+      const exitUrl = `/exit/${sessionId}`;
+      const trackingParams = new URLSearchParams();
+      
+      if (currentParams.get('source')) trackingParams.set('source', currentParams.get('source')!);
+      if (currentParams.get('sub_source')) trackingParams.set('sub_source', currentParams.get('sub_source')!);
+      
+      const finalExitUrl = trackingParams.toString() ? `${exitUrl}?${trackingParams.toString()}` : exitUrl;
+      
+      setTimeout(() => {
+        setLocation(finalExitUrl);
+      }, 2000); // 2 second delay to show completion message
+      
+      return;
+    }
+    
+    // For Steps 1 and 2, continue with profile update
     const stepData = { ...formData, currentStep };
     
     // Validate based on current step
@@ -324,6 +357,10 @@ export default function Survey({ params }: SurveyProps) {
       } else {
         // All questions completed, move to step 3
         setCurrentStep(3);
+        
+        // Invalidate session cache to ensure fresh data for exit lottery
+        queryClient.invalidateQueries({ queryKey: ['/api/user/session'] });
+        
         toast({
           title: "Survey Complete!",
           description: "Thank you for answering our questions. Now see your offers!",
@@ -693,6 +730,7 @@ export default function Survey({ params }: SurveyProps) {
             </div>
             
             <SurveyStep
+              key={currentQuestion.id}
               question={currentQuestion}
               onNext={handleSurveyAnswer}
               onPrevious={handleSurveyPrevious}

@@ -438,11 +438,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate answer against question options
       if (question.type === 'multiple_choice' || question.type === 'yes_no') {
-        const validOptions = question.options as string[];
-        if (!validOptions || !validOptions.includes(validatedData.answer)) {
+        // Parse options if they're stored as JSON string
+        let validOptions: string[];
+        if (typeof question.options === 'string') {
+          try {
+            validOptions = JSON.parse(question.options);
+          } catch (parseError) {
+            console.error('Error parsing question options:', parseError, 'Raw options:', question.options);
+            return res.status(500).json({ message: "Invalid question configuration" });
+          }
+        } else {
+          validOptions = question.options as string[];
+        }
+        
+        console.log(`Answer validation: question=${question.id}, type=${question.type}, received="${validatedData.answer}", validOptions=${JSON.stringify(validOptions)}`);
+        
+        // Case-insensitive comparison for user-friendly validation
+        const normalizedAnswer = validatedData.answer.trim();
+        const isValidAnswer = validOptions.some(option => 
+          option.toLowerCase() === normalizedAnswer.toLowerCase()
+        );
+        
+        if (!validOptions || !isValidAnswer) {
           return res.status(400).json({ 
             message: "Invalid answer for this question",
-            validOptions: validOptions
+            validOptions: validOptions,
+            receivedAnswer: validatedData.answer
           });
         }
       }

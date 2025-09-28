@@ -50,17 +50,18 @@ export default function Sidebar() {
             
             return (
               <li key={item.name}>
-                <Link href={item.href}>
-                  <a
-                    className={cn(
-                      "nav-link flex items-center px-3 py-2 rounded-md text-sm transition-colors",
-                      isActive ? "active" : "hover:bg-accent hover:text-accent-foreground"
-                    )}
-                    data-testid={`nav-${item.name.toLowerCase()}`}
-                  >
-                    <item.icon className="h-4 w-4 mr-3" />
-                    {item.name}
-                  </a>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )}
+                  data-testid={`nav-link-${item.name.toLowerCase()}`}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
                 </Link>
               </li>
             );
@@ -76,10 +77,10 @@ export default function Sidebar() {
           </div>
           <div className="ml-3 flex-1 min-w-0">
             <p className="text-sm font-medium truncate" data-testid="user-name">
-              {user?.firstName || user?.email || "Admin User"}
+              {(user as any)?.email || "Admin User"}
             </p>
             <p className="text-xs text-muted-foreground truncate" data-testid="user-email">
-              {user?.email || "admin@platform.com"}
+              {(user as any)?.email || "admin@platform.com"}
             </p>
           </div>
         </div>
