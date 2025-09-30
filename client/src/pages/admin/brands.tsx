@@ -416,6 +416,72 @@ function GiveawayManagement() {
 }
 
 export default function Brands() {
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const [brandConfig, setBrandConfig] = useState({
+    modefree: {
+      name: 'ModeFreeFinds.com',
+      domain: 'modefreeFinds.com',
+      description: 'Consumer goods, samples, deals',
+      theme: 'Blue to Purple',
+      focus: 'Free product samples and exclusive discounts',
+      status: true
+    },
+    modemarket: {
+      name: 'ModeMarketMunchies.com',
+      domain: 'modeMarketMunchies.com',
+      description: 'Finance, investing, market insights',
+      theme: 'Green to Emerald',
+      focus: 'Investment analysis and savings strategies',
+      status: true
+    }
+  });
+
+  const [formValues, setFormValues] = useState({
+    name: '',
+    domain: '',
+    description: '',
+    theme: '',
+    focus: '',
+    status: true
+  });
+
+  const handleConfigureClick = (brand: string) => {
+    setSelectedBrand(brand);
+    const config = brandConfig[brand as keyof typeof brandConfig];
+    setFormValues({
+      name: config.name,
+      domain: config.domain,
+      description: config.description,
+      theme: config.theme,
+      focus: config.focus,
+      status: config.status
+    });
+    setConfigDialogOpen(true);
+  };
+
+  const handleSaveConfig = () => {
+    if (selectedBrand) {
+      setBrandConfig({
+        ...brandConfig,
+        [selectedBrand]: formValues
+      });
+      toast({
+        title: "Configuration Saved",
+        description: `Brand settings for ${formValues.name} have been updated.`,
+      });
+      setConfigDialogOpen(false);
+    }
+  };
+
+  const handleCancelConfig = () => {
+    setConfigDialogOpen(false);
+  };
+
+  const currentBrand = selectedBrand ? brandConfig[selectedBrand as keyof typeof brandConfig] : null;
+
   return (
     <div className="p-6 space-y-6" data-testid="brands-page">
       {/* Header */}
@@ -501,7 +567,12 @@ export default function Brands() {
             
             {/* Actions */}
             <div className="flex space-x-2">
-              <Button size="sm" className="flex-1" data-testid="button-configure-modefree">
+              <Button 
+                size="sm" 
+                className="flex-1" 
+                data-testid="button-configure-modefree"
+                onClick={() => handleConfigureClick('modefree')}
+              >
                 <Settings className="h-4 w-4 mr-1" />
                 Configure
               </Button>
@@ -585,7 +656,12 @@ export default function Brands() {
             
             {/* Actions */}
             <div className="flex space-x-2">
-              <Button size="sm" className="flex-1" data-testid="button-configure-modemarket">
+              <Button 
+                size="sm" 
+                className="flex-1" 
+                data-testid="button-configure-modemarket"
+                onClick={() => handleConfigureClick('modemarket')}
+              >
                 <Settings className="h-4 w-4 mr-1" />
                 Configure
               </Button>
@@ -711,6 +787,104 @@ export default function Brands() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Brand Configuration Dialog */}
+      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-brand-config">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configure {currentBrand?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          {currentBrand && (
+            <div className="space-y-6 mt-4">
+              {/* Brand Information */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Brand Name</Label>
+                  <Input 
+                    value={formValues.name} 
+                    onChange={(e) => setFormValues({ ...formValues, name: e.target.value })}
+                    className="mt-1.5"
+                    data-testid="input-brand-name"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Domain</Label>
+                  <Input 
+                    value={formValues.domain} 
+                    onChange={(e) => setFormValues({ ...formValues, domain: e.target.value })}
+                    className="mt-1.5"
+                    data-testid="input-brand-domain"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Description</Label>
+                  <Input 
+                    value={formValues.description} 
+                    onChange={(e) => setFormValues({ ...formValues, description: e.target.value })}
+                    className="mt-1.5"
+                    data-testid="input-brand-description"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Theme Colors</Label>
+                  <Input 
+                    value={formValues.theme} 
+                    onChange={(e) => setFormValues({ ...formValues, theme: e.target.value })}
+                    className="mt-1.5"
+                    data-testid="input-brand-theme"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Focus Area</Label>
+                  <Input 
+                    value={formValues.focus} 
+                    onChange={(e) => setFormValues({ ...formValues, focus: e.target.value })}
+                    className="mt-1.5"
+                    data-testid="input-brand-focus"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 border rounded-md">
+                  <div>
+                    <Label className="text-sm font-medium">Brand Status</Label>
+                    <p className="text-xs text-muted-foreground">Enable or disable this brand</p>
+                  </div>
+                  <Switch 
+                    checked={formValues.status} 
+                    onCheckedChange={(checked) => setFormValues({ ...formValues, status: checked })}
+                    data-testid="switch-brand-status" 
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={handleCancelConfig}
+                  data-testid="button-cancel-config"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSaveConfig}
+                  data-testid="button-save-config"
+                >
+                  Save Configuration
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
