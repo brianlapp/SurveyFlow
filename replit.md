@@ -1,6 +1,13 @@
 # Overview
 
-A multi-brand co-registration platform designed to transform user engagement into revenue through intelligent survey flows and offer optimization. The platform targets $3+ revenue per user through strategic offer placement and smart question sequencing, featuring two main brands: ModeFreeFinds.com (consumer goods) and ModeMarketMunchies.com (finance/investing). The system includes a comprehensive admin dashboard for managing surveys, offers, and revenue tracking with real-time analytics.
+A multi-brand co-registration platform designed to transform user engagement into revenue through intelligent survey flows and offer optimization. The platform targets $3+ revenue per user through strategic offer placement and smart question sequencing, featuring two main brands: ModeFreeFinds.com (consumer goods) and ModeMarketMunchies.com (finance/investing). The system includes a comprehensive admin dashboard for managing surveys, offers, revenue tracking with real-time analytics, and brand configuration management.
+
+# Recent Changes
+
+## Latest Updates (September 30, 2025)
+- **Admin User Detail View**: Added Eye icon button on Users page to view individual user's complete survey responses with question details, categories, and tracking info
+- **Brand Configuration Dialog**: Implemented Configure buttons on Brands page with fully controlled forms for managing brand settings (name, domain, description, theme, focus area, status)
+- **State Persistence**: Brand configuration changes persist in session state and display correctly when reopening dialogs
 
 # User Preferences
 
