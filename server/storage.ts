@@ -62,6 +62,7 @@ export interface IStorage {
   createResponse(response: InsertResponse): Promise<Response>;
   upsertResponse(response: InsertResponse): Promise<Response>;
   getResponsesByUser(endUserId: string): Promise<Response[]>;
+  getResponsesWithQuestions(endUserId: string): Promise<any[]>;
   getUserResponseCount(endUserId: string): Promise<number>;
   
   // Offer interaction operations
@@ -269,6 +270,24 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(responses)
+      .where(eq(responses.endUserId, endUserId))
+      .orderBy(responses.createdAt);
+  }
+
+  async getResponsesWithQuestions(endUserId: string): Promise<any[]> {
+    return await db
+      .select({
+        responseId: responses.id,
+        answer: responses.answer,
+        createdAt: responses.createdAt,
+        questionId: questions.id,
+        questionText: questions.text,
+        questionType: questions.type,
+        options: questions.options,
+        category: questions.category,
+      })
+      .from(responses)
+      .innerJoin(questions, eq(responses.questionId, questions.id))
       .where(eq(responses.endUserId, endUserId))
       .orderBy(responses.createdAt);
   }

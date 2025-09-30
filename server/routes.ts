@@ -883,6 +883,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/users/:id/responses', isAuthenticated, async (req, res) => {
+    try {
+      const endUser = await storage.getEndUser(req.params.id);
+      if (!endUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const responsesWithQuestions = await storage.getResponsesWithQuestions(req.params.id);
+      
+      res.json({
+        user: {
+          id: endUser.id,
+          firstName: endUser.firstName,
+          lastName: endUser.lastName,
+          email: endUser.email,
+          source: endUser.source,
+          subSource: endUser.subSource,
+        },
+        responses: responsesWithQuestions,
+      });
+    } catch (error) {
+      console.error("Error fetching user responses:", error);
+      res.status(500).json({ message: "Failed to fetch user responses" });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/daily-stats', isAuthenticated, async (req, res) => {
     try {

@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, TrendingUp, Search, User, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Download, TrendingUp, Search, User, Eye, MessageSquare } from "lucide-react";
 
 export default function Users() {
   const [filters, setFilters] = useState({
@@ -15,11 +16,18 @@ export default function Users() {
     source: 'all',
   });
 
-  const { data: users, isLoading } = useQuery({
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const { data: users = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/users'],
   });
 
-  const filteredUsers = users?.filter((user: any) => {
+  const { data: userResponses, isLoading: responsesLoading } = useQuery<any>({
+    queryKey: [`/api/users/${selectedUserId}/responses`],
+    enabled: !!selectedUserId,
+  });
+
+  const filteredUsers = users.filter((user: any) => {
     if (filters.search && !user.email.toLowerCase().includes(filters.search.toLowerCase())) {
       return false;
     }
@@ -234,7 +242,12 @@ export default function Users() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-3">
-                        <Button variant="ghost" size="sm" data-testid="button-view-user">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setSelectedUserId(user.id)}
+                          data-testid="button-view-user"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                       </td>
@@ -256,6 +269,87 @@ export default function Users() {
           )}
         </CardContent>
       </Card>
+
+      {/* User Responses Dialog */}
+      <Dialog open={!!selectedUserId} onOpenChange={(open) => !open && setSelectedUserId(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Survey Responses
+              {userResponses?.user && (
+                <span className="text-muted-foreground font-normal">
+                  - {userResponses.user.firstName} {userResponses.user.lastName}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {responsesLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          ) : userResponses?.responses && userResponses.responses.length > 0 ? (
+            <div className="space-y-4 mt-4">
+              {userResponses.responses.map((response: any, index: number) => (
+                <Card key={response.responseId} className="border-l-4 border-l-teal-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Question {index + 1}
+                          {response.category && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {response.category}
+                            </Badge>
+                          )}
+                        </p>
+                        <p className="font-medium text-base mb-3">{response.questionText}</p>
+                        <div className="bg-muted p-3 rounded-md">
+                          <p className="text-sm font-semibold text-teal-700">
+                            Answer: {typeof response.answer === 'string' ? response.answer : JSON.stringify(response.answer)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Answered: {new Date(response.createdAt).toLocaleString()}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No survey responses found for this user</p>
+            </div>
+          )}
+
+          {userResponses?.user && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Email</p>
+                  <p className="font-medium">{userResponses.user.email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Source</p>
+                  <p className="font-medium">{userResponses.user.source || 'Direct'}</p>
+                </div>
+                {userResponses.user.subSource && (
+                  <div>
+                    <p className="text-muted-foreground">Sub-Source</p>
+                    <p className="font-medium">{userResponses.user.subSource}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
