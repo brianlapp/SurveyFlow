@@ -36,6 +36,7 @@ type RegisterForm = z.infer<typeof registerFormSchema>;
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(1);
   const [trackingInfo, setTrackingInfo] = useState({
     source: 'direct',
     subSource: '',
@@ -48,8 +49,8 @@ export default function Register() {
     defaultValues: {
       firstName: '',
       lastName: '',
-      email: '',
-      confirmEmail: '',
+      email: `user${Date.now()}@temp.com`, // Auto-generate email
+      confirmEmail: `user${Date.now()}@temp.com`,
       age: '',
       gender: '',
       address: '',
@@ -168,15 +169,33 @@ export default function Register() {
     },
   });
 
+  const handleNextStep = async () => {
+    // Validate current step fields before proceeding
+    const fieldsToValidate = currentStep === 1 
+      ? ['firstName', 'lastName', 'age', 'gender'] as const
+      : ['phone', 'zip', 'address', 'city', 'state'] as const;
+    
+    const isValid = await form.trigger(fieldsToValidate);
+    if (isValid) {
+      setCurrentStep(2);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    setCurrentStep(1);
+  };
+
   const onSubmit = (data: RegisterForm) => {
     registerMutation.mutate(data);
   };
 
-  // Use consistent teal branding to match giveaway page
+  // Dynamic brand info based on current step
   const brandInfo = {
     name: 'Free Finds',
-    subtitle: 'Registration - Step 1 of 3',
-    description: 'Please provide your information to claim your free item',
+    subtitle: `Step: ${currentStep}/3`,
+    description: currentStep === 1 
+      ? 'Fill in your details to process your Product Giveaway order'
+      : 'Where should we ship your Product Giveaway?',
     gradient: 'bg-teal-primary',
     theme: 'teal',
   };
@@ -207,7 +226,7 @@ export default function Register() {
       {/* Progress Bar */}
       <div className="bg-white border-b border-gray-200 py-4">
         <div className="max-w-md mx-auto px-4">
-          <ProgressBar current={1} total={3} />
+          <ProgressBar current={currentStep} total={3} />
         </div>
       </div>
 
@@ -216,28 +235,35 @@ export default function Register() {
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
           {/* Main Registration Form */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-teal-primary text-white rounded-full w-8 h-8 flex items-center justify-center">
-                <User className="h-5 w-5" />
-              </div>
-              <h2 className="text-lg font-bold" data-testid="form-title">Registration Form</h2>
+            <h2 className="text-xl font-bold text-center mb-6" data-testid="form-title">
+              {brandInfo.description}
+            </h2>
+            
+            {/* Product Image - shown in both steps */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src="/api/placeholder/120/120" 
+                alt="Product Giveaway"
+                className="w-32 h-32 rounded-lg object-cover border-4 border-teal-primary"
+              />
             </div>
-            <p className="text-gray-600 text-sm mb-6">
-              Please provide your information to get started. This will only take a minute.
-            </p>
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* Name Fields */}
-                <div className="grid grid-cols-2 gap-3">
+                
+                {/* STEP 1: Personal Info */}
+                {currentStep === 1 && (
+                  <>
+                    {/* First Name */}
                     <FormField
                       control={form.control}
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name *</FormLabel>
+                          <FormLabel>First Name</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="John" 
+                              placeholder="First Name" 
                               {...field} 
                               data-testid="input-first-name"
                             />
@@ -246,15 +272,17 @@ export default function Register() {
                         </FormItem>
                       )}
                     />
+                    
+                    {/* Last Name */}
                     <FormField
                       control={form.control}
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last Name *</FormLabel>
+                          <FormLabel>Last Name</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="Doe" 
+                              placeholder="Last Name" 
                               {...field} 
                               data-testid="input-last-name"
                             />
@@ -263,50 +291,9 @@ export default function Register() {
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                {/* Email Fields */}
-                <div className="space-y-3">
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="email"
-                              placeholder="john@example.com" 
-                              {...field} 
-                              data-testid="input-email"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="confirmEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Email Address *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="email"
-                              placeholder="john@example.com" 
-                              {...field} 
-                              data-testid="input-confirm-email"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                {/* Demographics */}
-                <div className="grid grid-cols-2 gap-3">
+                    {/* Birth Date - Month/Day/Year */}
+                    <div className="grid grid-cols-3 gap-2">
                     <FormField
                       control={form.control}
                       name="age"
