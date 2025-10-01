@@ -293,57 +293,137 @@ export default function Register() {
                     />
 
                     {/* Birth Date - Month/Day/Year */}
-                    <div className="grid grid-cols-3 gap-2">
-                    <FormField
-                      control={form.control}
-                      name="age"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Age Range *</FormLabel>
-                          <FormControl>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <SelectTrigger data-testid="select-age">
-                                <SelectValue placeholder="Select Age Range" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="18-24">18-24</SelectItem>
-                                <SelectItem value="25-34">25-34</SelectItem>
-                                <SelectItem value="35-44">35-44</SelectItem>
-                                <SelectItem value="45-54">45-54</SelectItem>
-                                <SelectItem value="55-64">55-64</SelectItem>
-                                <SelectItem value="65+">65+</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="gender"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Gender *</FormLabel>
-                          <FormControl>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <SelectTrigger data-testid="select-gender">
-                                <SelectValue placeholder="Select Gender" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                                <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                    <div>
+                      <Label className="mb-2 block">Birth Date *</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <FormField
+                          control={form.control}
+                          name="age"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Select value={field.value} onValueChange={field.onChange}>
+                                  <SelectTrigger data-testid="select-month">
+                                    <SelectValue placeholder="MM" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="01">January</SelectItem>
+                                    <SelectItem value="02">February</SelectItem>
+                                    <SelectItem value="03">March</SelectItem>
+                                    <SelectItem value="04">April</SelectItem>
+                                    <SelectItem value="05">May</SelectItem>
+                                    <SelectItem value="06">June</SelectItem>
+                                    <SelectItem value="07">July</SelectItem>
+                                    <SelectItem value="08">August</SelectItem>
+                                    <SelectItem value="09">September</SelectItem>
+                                    <SelectItem value="10">October</SelectItem>
+                                    <SelectItem value="11">November</SelectItem>
+                                    <SelectItem value="12">December</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="gender"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Select value={field.value} onValueChange={field.onChange}>
+                                  <SelectTrigger data-testid="select-day">
+                                    <SelectValue placeholder="DD" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                      <SelectItem key={day} value={day.toString().padStart(2, '0')}>
+                                        {day}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="zip"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Select value={field.value} onValueChange={field.onChange}>
+                                  <SelectTrigger data-testid="select-year">
+                                    <SelectValue placeholder="YYYY" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Array.from({ length: 100 }, (_, i) => 2025 - i).map(year => (
+                                      <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
 
+                    {/* Gender */}
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gender</FormLabel>
+                          <FormControl>
+                            <div className="grid grid-cols-2 gap-3">
+                              <Button
+                                type="button"
+                                variant={field.value === 'female' ? 'default' : 'outline'}
+                                onClick={() => field.onChange('female')}
+                                className="w-full"
+                                data-testid="button-gender-female"
+                              >
+                                👤 Female
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={field.value === 'male' ? 'default' : 'outline'}
+                                onClick={() => field.onChange('male')}
+                                className="w-full"
+                                data-testid="button-gender-male"
+                              >
+                                👤 Male
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Step 1 Continue Button */}
+                    <Button 
+                      type="button"
+                      onClick={handleNextStep}
+                      className="w-full bg-teal-primary text-white py-3 rounded-lg font-bold text-lg hover:bg-opacity-90 transition-colors" 
+                      data-testid="button-continue-step1"
+                    >
+                      Continue
+                    </Button>
+                  </>
+                )}
+
+                {/* STEP 2: Address Info */}
+                {currentStep === 2 && (
+                  <>
                 {/* Address */}
                 <div className="space-y-3">
                     <FormField
@@ -439,14 +519,28 @@ export default function Register() {
                     )}
                   />
 
-                <Button 
-                  type="submit" 
-                  className="w-full bg-teal-primary text-white py-3 rounded-lg font-bold text-lg hover:bg-opacity-90 transition-colors" 
-                  disabled={registerMutation.isPending}
-                  data-testid="button-start-survey"
-                >
-                  {registerMutation.isPending ? 'Creating Account...' : 'Continue to Survey →'}
-                </Button>
+                    {/* Step 2 Navigation Buttons */}
+                    <div className="flex gap-3">
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        onClick={handlePreviousStep}
+                        className="flex-1 py-3 rounded-lg font-bold text-lg" 
+                        data-testid="button-back-step2"
+                      >
+                        Back
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        className="flex-1 bg-teal-primary text-white py-3 rounded-lg font-bold text-lg hover:bg-opacity-90 transition-colors" 
+                        disabled={registerMutation.isPending}
+                        data-testid="button-start-survey"
+                      >
+                        {registerMutation.isPending ? 'Creating...' : 'Continue'}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </form>
             </Form>
           </div>

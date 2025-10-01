@@ -14,6 +14,7 @@ interface SurveyStepProps {
   onPrevious?: () => void;
   canGoBack?: boolean;
   isLoading?: boolean;
+  productImage?: string;
 }
 
 export function SurveyStep({ 
@@ -21,7 +22,8 @@ export function SurveyStep({
   onNext, 
   onPrevious, 
   canGoBack = false,
-  isLoading = false 
+  isLoading = false,
+  productImage 
 }: SurveyStepProps) {
   const [answer, setAnswer] = useState<any>(null);
   const [multipleSelections, setMultipleSelections] = useState<string[]>([]);
@@ -156,6 +158,18 @@ export function SurveyStep({
 
   return (
     <div className="survey-step p-6 rounded-lg max-w-2xl mx-auto" data-testid="survey-step">
+      {/* Product Image - Always visible above question */}
+      {productImage && (
+        <div className="flex justify-center mb-6">
+          <img 
+            src={productImage} 
+            alt="Product Giveaway"
+            className="w-32 h-32 rounded-lg object-cover border-4 border-teal-primary"
+            data-testid="product-image"
+          />
+        </div>
+      )}
+      
       <div className="flex items-center justify-between mb-4">
         <h4 className="font-medium text-sm text-muted-foreground">
           Question {question.orderIndex + 1}

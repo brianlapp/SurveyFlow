@@ -735,6 +735,7 @@ export default function Survey({ params }: SurveyProps) {
               onNext={handleSurveyAnswer}
               onPrevious={handleSurveyPrevious}
               canGoBack={currentQuestionIndex > 0 || currentStep > 1}
+              productImage={productImage}
               isLoading={false}
             />
           </div>
