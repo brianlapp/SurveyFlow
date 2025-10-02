@@ -4,7 +4,12 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (September 30, 2025)
+## Latest Updates (October 2, 2025)
+- **Two-Step Registration Form**: Split registration into Step 1 (name, age range, gender) and Step 2 (phone, zip, address, city, state) with validated progression between steps
+- **Product Image on Survey Questions**: Implemented product giveaway image display above each survey question to motivate users through the survey flow ("carrot on a stick" psychology)
+- **Field Binding Fixes**: Corrected registration form field bindings - age dropdown properly maps to age field with ranges (18-24, 25-34, etc.), gender buttons map to gender field
+
+## Previous Updates (September 30, 2025)
 - **Admin User Detail View**: Added Eye icon button on Users page to view individual user's complete survey responses with question details, categories, and tracking info
 - **Brand Configuration Dialog**: Implemented Configure buttons on Brands page with fully controlled forms for managing brand settings (name, domain, description, theme, focus area, status)
 - **State Persistence**: Brand configuration changes persist in session state and display correctly when reopening dialogs
