@@ -910,6 +910,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics routes
+  app.get('/api/analytics/daily-stats/:startDate/:endDate', isAuthenticated, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.params;
+      const stats = await storage.getDailyStats(
+        new Date(startDate),
+        new Date(endDate)
+      );
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching daily stats:", error);
+      res.status(500).json({ message: "Failed to fetch daily stats" });
+    }
+  });
+
   app.get('/api/analytics/daily-stats', isAuthenticated, async (req, res) => {
     try {
       const { startDate, endDate } = req.query;

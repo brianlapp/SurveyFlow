@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,12 +45,18 @@ export default function Dashboard() {
   });
 
   // Fetch last 30 days of data for revenue chart
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 30);
-  const endDate = new Date();
+  const chartDateRange = useMemo(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    return {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    };
+  }, []);
   
   const { data: chartData, isLoading: chartLoading } = useQuery<DailyStat[]>({
-    queryKey: ['/api/analytics/daily-stats', { startDate: startDate.toISOString(), endDate: endDate.toISOString() }],
+    queryKey: ['/api/analytics/daily-stats', chartDateRange.startDate, chartDateRange.endDate],
   });
 
   if (metricsLoading) {
