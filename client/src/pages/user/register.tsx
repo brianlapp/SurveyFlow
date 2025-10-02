@@ -293,96 +293,40 @@ export default function Register() {
                       )}
                     />
 
-                    {/* Birth Date - Month/Day/Year */}
-                    <div>
-                      <Label className="mb-2 block">Birth Date *</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <FormField
-                          control={form.control}
-                          name="age"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Select value={field.value} onValueChange={field.onChange}>
-                                  <SelectTrigger data-testid="select-month">
-                                    <SelectValue placeholder="MM" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="01">January</SelectItem>
-                                    <SelectItem value="02">February</SelectItem>
-                                    <SelectItem value="03">March</SelectItem>
-                                    <SelectItem value="04">April</SelectItem>
-                                    <SelectItem value="05">May</SelectItem>
-                                    <SelectItem value="06">June</SelectItem>
-                                    <SelectItem value="07">July</SelectItem>
-                                    <SelectItem value="08">August</SelectItem>
-                                    <SelectItem value="09">September</SelectItem>
-                                    <SelectItem value="10">October</SelectItem>
-                                    <SelectItem value="11">November</SelectItem>
-                                    <SelectItem value="12">December</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="gender"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Select value={field.value} onValueChange={field.onChange}>
-                                  <SelectTrigger data-testid="select-day">
-                                    <SelectValue placeholder="DD" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                                      <SelectItem key={day} value={day.toString().padStart(2, '0')}>
-                                        {day}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="zip"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Select value={field.value} onValueChange={field.onChange}>
-                                  <SelectTrigger data-testid="select-year">
-                                    <SelectValue placeholder="YYYY" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({ length: 100 }, (_, i) => 2025 - i).map(year => (
-                                      <SelectItem key={year} value={year.toString()}>
-                                        {year}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
+                    {/* Age Range */}
+                    <FormField
+                      control={form.control}
+                      name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Age Range *</FormLabel>
+                          <FormControl>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger data-testid="select-age">
+                                <SelectValue placeholder="Select your age range" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="18-24">18-24</SelectItem>
+                                <SelectItem value="25-34">25-34</SelectItem>
+                                <SelectItem value="35-44">35-44</SelectItem>
+                                <SelectItem value="45-54">45-54</SelectItem>
+                                <SelectItem value="55-64">55-64</SelectItem>
+                                <SelectItem value="65+">65+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     {/* Gender */}
                     <FormField
                       control={form.control}
-                      name="phone"
+                      name="gender"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Gender</FormLabel>
+                          <FormLabel>Gender *</FormLabel>
                           <FormControl>
                             <div className="grid grid-cols-2 gap-3">
                               <Button
