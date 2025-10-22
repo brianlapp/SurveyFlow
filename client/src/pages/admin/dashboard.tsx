@@ -130,7 +130,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="h-72">
+              <div className="h-72 relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData || []}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
