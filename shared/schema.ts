@@ -113,7 +113,11 @@ export const offers = pgTable("offers", {
   clickUrl: varchar("click_url", { length: 500 }),
   payout: decimal("payout", { precision: 10, scale: 2 }).notNull(),
   category: varchar("category", { length: 100 }),
-  offerType: varchar("offer_type", { length: 50 }).default('main'), // main, exit, giveaway
+  offerType: varchar("offer_type", { length: 50 }).default('tune_standard'), // tune_standard, popup_script, next_link
+  impressionPixel: text("impression_pixel"), // Tune impression tracking pixel URL
+  scriptContent: text("script_content"), // JavaScript code for popup_script type
+  linkText: varchar("link_text", { length: 100 }).default('Next'), // Text for next_link type
+  triggerSettings: jsonb("trigger_settings"), // When/where offer displays: { triggerType, triggerValue, displayLocation }
   displayPages: integer("display_pages").array(), // Pages where offer should appear
   position: integer("position").default(1), // Position on page
   demographics: jsonb("demographics"), // Target demographics
