@@ -66,13 +66,22 @@ export default function Offers() {
       description: '',
       payout: '0.00',
       category: '',
+      offerType: 'tune_standard',
       tuneOfferId: '',
+      clickUrl: '',
+      impressionPixel: '',
+      imageUrl: '',
+      scriptContent: '',
+      linkText: 'Next',
+      triggerSettings: null,
       displayPages: [],
       position: 1,
       isActive: true,
       isPaused: false,
     },
   });
+
+  const selectedOfferType = form.watch('offerType');
 
   const onSubmit = (data: CreateOfferForm) => {
     createOfferMutation.mutate(data);
@@ -204,19 +213,46 @@ export default function Offers() {
           
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Offer Type Selector */}
+              <FormField
+                control={form.control}
+                name="offerType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Offer Type *</FormLabel>
+                    <FormControl>
+                      <Select value={field.value || 'tune_standard'} onValueChange={field.onChange}>
+                        <SelectTrigger data-testid="select-offer-type">
+                          <SelectValue placeholder="Select Offer Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tune_standard">Tune Standard (Tracking Link + Pixel)</SelectItem>
+                          <SelectItem value="popup_script">Popup Script</SelectItem>
+                          <SelectItem value="next_link">Next Link (Coreg)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="tuneOfferId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tune Offer ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="12345" {...field} data-testid="input-tune-id" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                {/* Tune Offer ID - only for tune_standard */}
+                {selectedOfferType === 'tune_standard' && (
+                  <FormField
+                    control={form.control}
+                    name="tuneOfferId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tune Offer ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="12345" {...field} value={field.value || ''} data-testid="input-tune-id" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
                 <FormField
                   control={form.control}
                   name="payout"
@@ -260,7 +296,7 @@ export default function Offers() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Offer description..." {...field} data-testid="textarea-description" />
+                      <Textarea placeholder="Offer description..." {...field} value={field.value || ''} data-testid="textarea-description" />
                     </FormControl>
                   </FormItem>
                 )}
@@ -273,7 +309,7 @@ export default function Offers() {
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value || ''} onValueChange={field.onChange}>
                         <SelectTrigger data-testid="select-form-category">
                           <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
@@ -289,6 +325,102 @@ export default function Offers() {
                   </FormItem>
                 )}
               />
+
+              {/* Tune Standard Offer Fields */}
+              {selectedOfferType === 'tune_standard' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="clickUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tracking Link (Click URL) *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://track.affiliate.com/..." {...field} value={field.value || ''} data-testid="input-click-url" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="impressionPixel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Impression Pixel URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://track.affiliate.com/pixel..." {...field} value={field.value || ''} data-testid="input-impression-pixel" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Offer Image URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://cdn.example.com/offer-image.jpg" {...field} value={field.value || ''} data-testid="input-image-url" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              {/* Popup Script Offer Fields */}
+              {selectedOfferType === 'popup_script' && (
+                <FormField
+                  control={form.control}
+                  name="scriptContent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Popup Script *</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="<script>...</script>" 
+                          {...field}
+                          value={field.value || ''}
+                          className="font-mono text-sm min-h-[120px]"
+                          data-testid="textarea-script-content"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Next Link Offer Fields */}
+              {selectedOfferType === 'next_link' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="linkText"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Link Text *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Next" {...field} value={field.value || ''} data-testid="input-link-text" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="clickUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Coreg Script URL *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://coreg.example.com/script" {...field} value={field.value || ''} data-testid="input-coreg-url" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
               
               <div>
                 <FormLabel>Display Pages</FormLabel>
