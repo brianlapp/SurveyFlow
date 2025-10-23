@@ -44,7 +44,7 @@ export default function Offers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
-      setShowCreateModal(false);
+      handleModalChange(false); // This will close modal and reset form
       toast({
         title: "Success",
         description: "Offer created successfully",
@@ -87,6 +87,30 @@ export default function Offers() {
     createOfferMutation.mutate(data);
   };
 
+  // Reset form when modal opens/closes to prevent stale data
+  const handleModalChange = (open: boolean) => {
+    setShowCreateModal(open);
+    // Always reset form to ensure clean state
+    form.reset({
+      name: '',
+      description: '',
+      payout: '0.00',
+      category: '',
+      offerType: 'tune_standard',
+      tuneOfferId: '',
+      clickUrl: '',
+      impressionPixel: '',
+      imageUrl: '',
+      scriptContent: '',
+      linkText: 'Next',
+      triggerSettings: null,
+      displayPages: [],
+      position: 1,
+      isActive: true,
+      isPaused: false,
+    });
+  };
+
   const offersArray = Array.isArray(offers) ? offers : [];
   const filteredOffers = offersArray.filter((offer: any) => {
     if (filters.category && filters.category !== 'all' && offer.category !== filters.category) return false;
@@ -111,7 +135,7 @@ export default function Offers() {
             Import CSV
           </Button>
           <Button 
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => handleModalChange(true)}
             data-testid="button-create-offer"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -205,7 +229,7 @@ export default function Offers() {
       )}
 
       {/* Create Offer Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+      <Dialog open={showCreateModal} onOpenChange={handleModalChange}>
         <DialogContent className="max-w-2xl" data-testid="modal-create-offer">
           <DialogHeader>
             <DialogTitle>Add New Offer</DialogTitle>
@@ -449,7 +473,7 @@ export default function Offers() {
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => handleModalChange(false)}
                   data-testid="button-cancel"
                 >
                   Cancel
