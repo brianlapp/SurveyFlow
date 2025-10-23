@@ -15,11 +15,19 @@ import {
   Play,
   Settings,
   Download,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 
 export default function Revenue() {
   const [manualPostbackUserId, setManualPostbackUserId] = useState('');
+  const [coregStartDate, setCoregStartDate] = useState('');
+  const [coregStartTime, setCoregStartTime] = useState('00:00');
+  const [coregEndDate, setCoregEndDate] = useState('');
+  const [coregEndTime, setCoregEndTime] = useState('23:59');
+  const [coregReport, setCoregReport] = useState<any>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -51,6 +59,49 @@ export default function Revenue() {
   const handleManualPostback = () => {
     if (!manualPostbackUserId.trim()) return;
     manualPostbackMutation.mutate(manualPostbackUserId);
+  };
+
+  const coregReportMutation = useMutation({
+    mutationFn: async ({ startDateTime, endDateTime }: { startDateTime: string; endDateTime: string }) => {
+      return await apiRequest('POST', '/api/revenue/coreg-report', { startDateTime, endDateTime });
+    },
+    onSuccess: (data) => {
+      setCoregReport(data);
+      toast({
+        title: "Success",
+        description: "Coreg revenue report fetched successfully",
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.details || error.message || "Failed to fetch revenue report";
+      toast({
+        title: "TMG API Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFetchCoregReport = () => {
+    if (!coregStartDate || !coregEndDate) {
+      toast({
+        title: "Error",
+        description: "Please select both start and end dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Format dates to MM/dd/yyyy HH:mm
+    const formatDate = (date: string, time: string) => {
+      const [year, month, day] = date.split('-');
+      return `${month}/${day}/${year} ${time}`;
+    };
+
+    const startDateTime = formatDate(coregStartDate, coregStartTime);
+    const endDateTime = formatDate(coregEndDate, coregEndTime);
+
+    coregReportMutation.mutate({ startDateTime, endDateTime });
   };
 
   return (
@@ -292,6 +343,160 @@ export default function Revenue() {
               <p className="text-xs opacity-75">Daily revenue and postback trends</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Coreg Revenue Report */}
+      <Card data-testid="card-coreg-report">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Coreg Revenue Report (TMG)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Fetch revenue data from TMG coreg system for a specific date range.
+          </p>
+          
+          {/* Date Range Inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Start Date & Time</label>
+              <div className="flex space-x-2">
+                <Input
+                  type="date"
+                  value={coregStartDate}
+                  onChange={(e) => setCoregStartDate(e.target.value)}
+                  data-testid="input-coreg-start-date"
+                  className="flex-1"
+                />
+                <Input
+                  type="time"
+                  value={coregStartTime}
+                  onChange={(e) => setCoregStartTime(e.target.value)}
+                  data-testid="input-coreg-start-time"
+                  className="w-28"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">End Date & Time</label>
+              <div className="flex space-x-2">
+                <Input
+                  type="date"
+                  value={coregEndDate}
+                  onChange={(e) => setCoregEndDate(e.target.value)}
+                  data-testid="input-coreg-end-date"
+                  className="flex-1"
+                />
+                <Input
+                  type="time"
+                  value={coregEndTime}
+                  onChange={(e) => setCoregEndTime(e.target.value)}
+                  data-testid="input-coreg-end-time"
+                  className="w-28"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <Button 
+            onClick={handleFetchCoregReport}
+            disabled={coregReportMutation.isPending}
+            data-testid="button-fetch-coreg-report"
+          >
+            {coregReportMutation.isPending ? 'Fetching...' : 'Fetch Report'}
+          </Button>
+          
+          {/* Report Results */}
+          {coregReport && (
+            <div className="mt-6 space-y-4">
+              {/* Summary */}
+              <div className="p-4 bg-accent rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Report Summary</h3>
+                  {coregReport.summary?.is_authenticated ? (
+                    <Badge className="status-active flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Authenticated
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="flex items-center gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Not Authenticated
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Publisher ID</p>
+                    <p className="font-medium" data-testid="text-publisher-id">
+                      {coregReport.summary?.publisher_id || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Publisher Name</p>
+                    <p className="font-medium" data-testid="text-publisher-name">
+                      {coregReport.summary?.publisher_name || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Records</p>
+                    <p className="font-medium" data-testid="text-record-count">
+                      {coregReport.summary?.no_of_records || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Start Date</p>
+                    <p className="font-medium text-xs">
+                      {coregReport.summary?.start_date_time || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">End Date</p>
+                    <p className="font-medium text-xs">
+                      {coregReport.summary?.end_date_time || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Placements Table */}
+              {coregReport.placements && coregReport.placements.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground">Placement</th>
+                        <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground">Clicks</th>
+                        <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground">Conversions</th>
+                        <th className="text-left py-3 px-3 text-sm font-medium text-muted-foreground">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coregReport.placements.map((placement: any, index: number) => (
+                        <tr key={index} className="border-b border-border hover:bg-muted/50">
+                          <td className="py-3 px-3 text-sm">{placement.name || 'N/A'}</td>
+                          <td className="py-3 px-3 text-sm">{placement.clicks || 0}</td>
+                          <td className="py-3 px-3 text-sm">{placement.conversions || 0}</td>
+                          <td className="py-3 px-3 text-sm font-medium text-green-600">
+                            ${placement.revenue?.toFixed(2) || '0.00'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-6 bg-muted/50 rounded-md text-center">
+                  <p className="text-sm text-muted-foreground">No placement data available for this date range</p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

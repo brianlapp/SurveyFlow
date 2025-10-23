@@ -977,6 +977,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TMG Coreg Revenue Report
+  app.post('/api/revenue/coreg-report', isAuthenticated, async (req, res) => {
+    try {
+      const { startDateTime, endDateTime } = req.body;
+      
+      // Validate date format (MM/dd/yyyy HH:mm)
+      const dateSchema = z.object({
+        startDateTime: z.string().regex(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/, "Start date must be in MM/dd/yyyy HH:mm format"),
+        endDateTime: z.string().regex(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/, "End date must be in MM/dd/yyyy HH:mm format"),
+      });
+      
+      const validatedData = dateSchema.parse({ startDateTime, endDateTime });
+      
+      // Get TMG credentials from environment
+      const username = process.env.TMG_REVENUE_USER;
+      const password = process.env.TMG_REVENUE_PASSWORD;
+      
+      if (!username || !password) {
+        return res.status(500).json({ message: "TMG API credentials not configured" });
+      }
+      
+      // Build request URL with query parameters
+      const url = new URL('http://services.tmginteractive.com/amsrevapi/TMGAPI/Revenue/');
+      url.searchParams.append('StartDateTime', validatedData.startDateTime);
+      url.searchParams.append('EndDateTime', validatedData.endDateTime);
+      url.searchParams.append('Type', 'JSON');
+      
+      console.log('TMG API Request URL:', url.toString());
+      console.log('TMG API Username:', username);
+      
+      // Make request to TMG API
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
+          'X-TMGRevenue-Version': '2',
+        },
+      });
+      
+      console.log('TMG API Response Status:', response.status, response.statusText);
+      
+      // Try to get response text for better error messages
+      const responseText = await response.text();
+      console.log('TMG API Response:', responseText);
+      
+      if (!response.ok) {
+        // Return the actual TMG error response to help debug
+        return res.status(response.status).json({ 
+          message: `TMG API error: ${response.status} ${response.statusText}`,
+          details: responseText 
+        });
+      }
+      
+      // Parse JSON response
+      const data = JSON.parse(responseText);
+      res.json(data);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid date format", errors: error.errors });
+      }
+      console.error("Error fetching TMG revenue report:", error);
+      res.status(500).json({ message: "Failed to fetch revenue report", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
