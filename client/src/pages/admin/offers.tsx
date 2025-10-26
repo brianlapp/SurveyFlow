@@ -650,71 +650,68 @@ export default function Offers() {
                 )}
               />
               
-              {/* Show all type-specific fields in edit mode */}
-              {(editingOffer?.offerType === 'tune_standard' || form.watch('offerType') === 'tune_standard') && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="tuneOfferId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tune Offer ID *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="TUNE-12345" {...field} value={field.value || ''} data-testid="input-tune-id" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="clickUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tracking Link *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://track.example.com/click" {...field} value={field.value || ''} data-testid="input-click-url" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="impressionPixel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Impression Pixel URL</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://track.example.com/pixel.gif" {...field} value={field.value || ''} data-testid="input-impression-pixel" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="imageUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Image URL</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://example.com/image.jpg" {...field} value={field.value || ''} data-testid="input-image-url" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </>
-              )}
-              
-              {(editingOffer?.offerType === 'popup_script' || form.watch('offerType') === 'popup_script') && (
+              {/* Show all fields in edit modal */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="tuneOfferId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tune Offer ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="TUNE-12345" {...field} value={field.value || ''} data-testid="input-tune-id" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="clickUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Click/Tracking URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://track.example.com/click" {...field} value={field.value || ''} data-testid="input-click-url" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="impressionPixel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Impression Pixel URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://track.example.com/pixel.gif" {...field} value={field.value || ''} data-testid="input-impression-pixel" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Image URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://example.com/image.jpg" {...field} value={field.value || ''} data-testid="input-image-url" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
                 <FormField
                   control={form.control}
                   name="scriptContent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Script Content *</FormLabel>
+                      <FormLabel>Script Content</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="<script>...</script>" 
@@ -722,44 +719,40 @@ export default function Offers() {
                           value={field.value || ''} 
                           data-testid="textarea-script-content" 
                           className="font-mono text-sm"
-                          rows={6}
+                          rows={4}
                         />
                       </FormControl>
                     </FormItem>
                   )}
                 />
-              )}
-              
-              {(editingOffer?.offerType === 'next_link' || form.watch('offerType') === 'next_link') && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="linkText"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Link Text *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Next" {...field} value={field.value || ''} data-testid="input-link-text" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="clickUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Coreg Script URL *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://coreg.example.com/script" {...field} value={field.value || ''} data-testid="input-coreg-url" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </>
-              )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="linkText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Link Text</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Next" {...field} value={field.value || ''} data-testid="input-link-text" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="position"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Display Position</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="1" {...field} value={field.value || 1} data-testid="input-position" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
               
               <div>
                 <FormLabel>Display Pages</FormLabel>
