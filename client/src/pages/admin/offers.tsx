@@ -754,28 +754,34 @@ export default function Offers() {
                 </div>
               </div>
               
-              <div>
-                <FormLabel>Display Pages</FormLabel>
-                <div className="grid grid-cols-6 gap-2 mt-2">
-                  {[5, 10, 15, 20, 25, 30].map((page) => (
-                    <label key={page} className="flex items-center">
-                      <Checkbox
-                        checked={form.watch('displayPages')?.includes(page)}
-                        onCheckedChange={(checked) => {
-                          const current = form.getValues('displayPages') || [];
-                          if (checked) {
-                            form.setValue('displayPages', [...current, page]);
-                          } else {
-                            form.setValue('displayPages', current.filter(p => p !== page));
-                          }
-                        }}
-                        data-testid={`checkbox-page-${page}`}
-                      />
-                      <span className="ml-1">{page}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <FormField
+                control={form.control}
+                name="displayPages"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Pages</FormLabel>
+                    <div className="grid grid-cols-6 gap-2 mt-2">
+                      {[5, 10, 15, 20, 25, 30].map((page) => (
+                        <label key={page} className="flex items-center">
+                          <Checkbox
+                            checked={(field.value || []).includes(page)}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, page]);
+                              } else {
+                                field.onChange(current.filter((p: number) => p !== page));
+                              }
+                            }}
+                            data-testid={`checkbox-page-${page}`}
+                          />
+                          <span className="ml-1">{page}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </FormItem>
+                )}
+              />
               
               <div className="flex justify-end space-x-3 mt-6">
                 <Button
