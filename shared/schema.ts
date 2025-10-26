@@ -141,7 +141,7 @@ export const offers = pgTable("offers", {
 export const offerInteractions = pgTable("offer_interactions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   endUserId: uuid("end_user_id").references(() => endUsers.id).notNull(),
-  offerId: uuid("offer_id").references(() => offers.id).notNull(),
+  offerId: uuid("offer_id").references(() => offers.id, { onDelete: 'cascade' }).notNull(),
   interactionType: varchar("interaction_type", { length: 50 }).notNull(), // view, click, conversion
   revenue: decimal("revenue", { precision: 10, scale: 2 }).default('0.00'),
   pageNumber: integer("page_number"),

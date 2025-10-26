@@ -25,6 +25,8 @@ type CreateOfferForm = z.infer<typeof createOfferFormSchema>;
 
 export default function Offers() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<any>(null);
   const [filters, setFilters] = useState({
     category: 'all',
     status: 'all',
@@ -48,6 +50,27 @@ export default function Offers() {
       toast({
         title: "Success",
         description: "Offer created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateOfferMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateOfferForm> }) => {
+      await apiRequest('PUT', `/api/offers/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
+      handleEditModalClose();
+      toast({
+        title: "Success",
+        description: "Offer updated successfully",
       });
     },
     onError: (error) => {
@@ -109,6 +132,59 @@ export default function Offers() {
       isActive: true,
       isPaused: false,
     });
+  };
+
+  const handleEdit = (offer: any) => {
+    setEditingOffer(offer);
+    // Pre-fill form with offer data
+    form.reset({
+      name: offer.name,
+      description: offer.description || '',
+      payout: offer.payout,
+      category: offer.category,
+      offerType: offer.offerType || 'tune_standard',
+      tuneOfferId: offer.tuneOfferId || '',
+      clickUrl: offer.clickUrl || '',
+      impressionPixel: offer.impressionPixel || '',
+      imageUrl: offer.imageUrl || '',
+      scriptContent: offer.scriptContent || '',
+      linkText: offer.linkText || 'Next',
+      triggerSettings: offer.triggerSettings || null,
+      displayPages: offer.displayPages || [],
+      position: offer.position || 1,
+      isActive: offer.isActive,
+      isPaused: offer.isPaused,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
+    setEditingOffer(null);
+    form.reset({
+      name: '',
+      description: '',
+      payout: '0.00',
+      category: '',
+      offerType: 'tune_standard',
+      tuneOfferId: '',
+      clickUrl: '',
+      impressionPixel: '',
+      imageUrl: '',
+      scriptContent: '',
+      linkText: 'Next',
+      triggerSettings: null,
+      displayPages: [],
+      position: 1,
+      isActive: true,
+      isPaused: false,
+    });
+  };
+
+  const onEditSubmit = (data: CreateOfferForm) => {
+    if (editingOffer) {
+      updateOfferMutation.mutate({ id: editingOffer.id, data });
+    }
   };
 
   const offersArray = Array.isArray(offers) ? offers : [];
@@ -215,7 +291,7 @@ export default function Offers() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredOffers.map((offer: any) => (
-            <OfferCard key={offer.id} offer={offer} />
+            <OfferCard key={offer.id} offer={offer} onEdit={handleEdit} />
           ))}
           
           {filteredOffers.length === 0 && (
@@ -484,6 +560,244 @@ export default function Offers() {
                   data-testid="button-create"
                 >
                   {createOfferMutation.isPending ? 'Creating...' : 'Create Offer'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Offer Modal */}
+      <Dialog open={showEditModal} onOpenChange={handleEditModalClose}>
+        <DialogContent className="max-w-2xl" data-testid="modal-edit-offer">
+          <DialogHeader>
+            <DialogTitle>Edit Offer</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
+              {/* Same form fields as Create modal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Offer Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Premium Insurance Offer" {...field} data-testid="input-offer-name" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payout"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payout *</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="2.50" {...field} data-testid="input-payout" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Financial Services" {...field} data-testid="input-category" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="offerType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Offer Type *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} data-testid="select-offer-type">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select offer type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tune_standard">Tune Standard (Tracking + Pixel)</SelectItem>
+                          <SelectItem value="popup_script">Popup Script</SelectItem>
+                          <SelectItem value="next_link">Next Link (Coreg)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Enter offer description..." {...field} value={field.value || ''} data-testid="textarea-description" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {selectedOfferType === 'tune_standard' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="tuneOfferId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tune Offer ID *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="TUNE-12345" {...field} value={field.value || ''} data-testid="input-tune-id" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="clickUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tracking Link *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://track.example.com/click" {...field} value={field.value || ''} data-testid="input-click-url" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="impressionPixel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Impression Pixel URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://track.example.com/pixel.gif" {...field} value={field.value || ''} data-testid="input-impression-pixel" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="imageUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Image URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://example.com/image.jpg" {...field} value={field.value || ''} data-testid="input-image-url" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
+              
+              {selectedOfferType === 'popup_script' && (
+                <FormField
+                  control={form.control}
+                  name="scriptContent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Script Content *</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="<script>...</script>" 
+                          {...field} 
+                          value={field.value || ''} 
+                          data-testid="textarea-script-content" 
+                          className="font-mono text-sm"
+                          rows={6}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {selectedOfferType === 'next_link' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="linkText"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Link Text *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Next" {...field} value={field.value || ''} data-testid="input-link-text" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="clickUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Coreg Script URL *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://coreg.example.com/script" {...field} value={field.value || ''} data-testid="input-coreg-url" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
+              
+              <div>
+                <FormLabel>Display Pages</FormLabel>
+                <div className="grid grid-cols-6 gap-2 mt-2">
+                  {[5, 10, 15, 20, 25, 30].map((page) => (
+                    <label key={page} className="flex items-center">
+                      <Checkbox
+                        checked={form.watch('displayPages')?.includes(page)}
+                        onCheckedChange={(checked) => {
+                          const current = form.getValues('displayPages') || [];
+                          if (checked) {
+                            form.setValue('displayPages', [...current, page]);
+                          } else {
+                            form.setValue('displayPages', current.filter(p => p !== page));
+                          }
+                        }}
+                        data-testid={`checkbox-page-${page}`}
+                      />
+                      <span className="ml-1">{page}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleEditModalClose}
+                  data-testid="button-cancel-edit"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateOfferMutation.isPending}
+                  data-testid="button-update"
+                >
+                  {updateOfferMutation.isPending ? 'Updating...' : 'Update Offer'}
                 </Button>
               </div>
             </form>

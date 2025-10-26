@@ -10,9 +10,10 @@ import type { Offer } from "@shared/schema";
 
 interface OfferCardProps {
   offer: Offer;
+  onEdit?: (offer: Offer) => void;
 }
 
-export function OfferCard({ offer }: OfferCardProps) {
+export function OfferCard({ offer, onEdit }: OfferCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -138,6 +139,7 @@ export function OfferCard({ offer }: OfferCardProps) {
           <Button 
             size="sm" 
             className="flex-1"
+            onClick={() => onEdit?.(offer)}
             data-testid="button-edit-offer"
           >
             <Edit className="h-4 w-4 mr-1" />
