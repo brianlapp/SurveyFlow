@@ -569,13 +569,13 @@ export default function Offers() {
 
       {/* Edit Offer Modal */}
       <Dialog open={showEditModal} onOpenChange={handleEditModalClose}>
-        <DialogContent className="max-w-2xl" data-testid="modal-edit-offer">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="modal-edit-offer">
           <DialogHeader>
             <DialogTitle>Edit Offer</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
-              {/* Same form fields as Create modal */}
+              {/* Use editingOffer for conditional rendering in edit mode */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -650,7 +650,8 @@ export default function Offers() {
                 )}
               />
               
-              {selectedOfferType === 'tune_standard' && (
+              {/* Show all type-specific fields in edit mode */}
+              {(editingOffer?.offerType === 'tune_standard' || form.watch('offerType') === 'tune_standard') && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
@@ -707,7 +708,7 @@ export default function Offers() {
                 </>
               )}
               
-              {selectedOfferType === 'popup_script' && (
+              {(editingOffer?.offerType === 'popup_script' || form.watch('offerType') === 'popup_script') && (
                 <FormField
                   control={form.control}
                   name="scriptContent"
@@ -729,7 +730,7 @@ export default function Offers() {
                 />
               )}
               
-              {selectedOfferType === 'next_link' && (
+              {(editingOffer?.offerType === 'next_link' || form.watch('offerType') === 'next_link') && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
