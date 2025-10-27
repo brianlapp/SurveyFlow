@@ -5,7 +5,8 @@ A multi-brand co-registration platform designed to transform user engagement int
 # Recent Changes
 
 ## Latest Updates (October 27, 2025)
-- **Automatic Tune Impression Pixel Generation**: Enhanced offers management with intelligent auto-generation of impression pixels from Tune tracking URLs. System automatically converts click URLs (aff_c) to impression pixels (aff_i), adds cachebuster parameters, preserves manual customizations, and clears tracking when switching to non-Tune URLs. Smart detection in edit mode identifies auto-generated vs manually-edited pixels to prevent unwanted overwrites.
+- **Survey Flow Preview Tool**: New admin preview mode at `/admin/survey-preview` allows testing the complete survey flow without filling out forms or recording data. Features include quick navigation between pages (Registration → Survey → Offers → Exit), live display of which offers appear on each page based on displayPages configuration, and summary statistics. Accessible via "Preview Survey Flow" button on admin dashboard. Supports page mapping: 5=Registration, 10=Survey, 15=Offers, 20=Exit.
+- **Universal Tune Pixel Auto-Generation**: Enhanced automatic impression pixel generation to work with ANY Tune tracking domain (previously limited to go2cloud.org). Now detects path-based `/aff_c` pattern, supporting track.modemobile.com, go2cloud.org, and all other Tune/HasOffers domains. Maintains smart features: auto-generation with cachebuster, manual edit preservation, and clearing on URL changes.
 
 ## Previous Updates (October 2, 2025)
 - **Two-Step Registration Form**: Split registration into Step 1 (name, age range, gender) and Step 2 (phone, zip, address, city, state) with validated progression between steps
