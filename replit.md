@@ -4,7 +4,10 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (October 2, 2025)
+## Latest Updates (October 27, 2025)
+- **Automatic Tune Impression Pixel Generation**: Enhanced offers management with intelligent auto-generation of impression pixels from Tune tracking URLs. System automatically converts click URLs (aff_c) to impression pixels (aff_i), adds cachebuster parameters, preserves manual customizations, and clears tracking when switching to non-Tune URLs. Smart detection in edit mode identifies auto-generated vs manually-edited pixels to prevent unwanted overwrites.
+
+## Previous Updates (October 2, 2025)
 - **Two-Step Registration Form**: Split registration into Step 1 (name, age range, gender) and Step 2 (phone, zip, address, city, state) with validated progression between steps
 - **Product Image on Survey Questions**: Implemented product giveaway image display above each survey question to motivate users through the survey flow ("carrot on a stick" psychology)
 - **Field Binding Fixes**: Corrected registration form field bindings - age dropdown properly maps to age field with ranges (18-24, 25-34, etc.), gender buttons map to gender field
