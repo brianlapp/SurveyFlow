@@ -15,6 +15,7 @@ import Analytics from "@/pages/admin/analytics";
 import Revenue from "@/pages/admin/revenue";
 import Brands from "@/pages/admin/brands";
 import Settings from "@/pages/admin/settings";
+import SurveyPreview from "@/pages/admin/survey-preview";
 import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
@@ -52,6 +53,7 @@ function Router() {
             <Route path="/admin/revenue" component={Revenue} />
             <Route path="/admin/brands" component={Brands} />
             <Route path="/admin/settings" component={Settings} />
+            <Route path="/admin/survey-preview" component={SurveyPreview} />
             <Route component={NotFound} />
           </Switch>
         </AdminLayout>

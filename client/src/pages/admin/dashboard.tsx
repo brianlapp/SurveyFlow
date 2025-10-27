@@ -20,8 +20,10 @@ import {
   Target,
   ChartArea,
   Trophy,
-  Clock
+  Clock,
+  Eye
 } from "lucide-react";
+import { Link } from "wouter";
 import type { DailyStat, Offer, EndUser } from "@shared/schema";
 
 interface DashboardMetrics {
@@ -73,6 +75,20 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6" data-testid="dashboard-page">
+      {/* Header with Preview Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Overview of your survey performance</p>
+        </div>
+        <Link href="/admin/survey-preview">
+          <Button className="gap-2" data-testid="button-preview-survey">
+            <Eye className="h-4 w-4" />
+            Preview Survey Flow
+          </Button>
+        </Link>
+      </div>
+
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
