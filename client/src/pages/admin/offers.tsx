@@ -122,8 +122,8 @@ export default function Offers() {
       return;
     }
     
-    // Check if this is a Tune/HasOffers click URL (contains go2cloud.org/aff_c)
-    if (clickUrl.includes('go2cloud.org/aff_c')) {
+    // Check if this is a Tune/HasOffers click URL (contains /aff_c path)
+    if (clickUrl.includes('/aff_c')) {
       // Transform click URL to impression pixel URL by replacing /aff_c with /aff_i
       let impressionUrl = clickUrl.replace('/aff_c', '/aff_i');
       
@@ -190,7 +190,7 @@ export default function Offers() {
     // Smart detection: Check if existing pixel appears to be auto-generated
     // If click URL is a Tune URL and pixel matches the derived format, mark it as auto-generated
     // Otherwise, leave ref empty to preserve manual customizations
-    if (offer.clickUrl && offer.clickUrl.includes('go2cloud.org/aff_c')) {
+    if (offer.clickUrl && offer.clickUrl.includes('/aff_c')) {
       let derivedPixel = offer.clickUrl.replace('/aff_c', '/aff_i');
       const separator = derivedPixel.includes('?') ? '&' : '?';
       derivedPixel += `${separator}cb=[CACHEBUSTER]`;
