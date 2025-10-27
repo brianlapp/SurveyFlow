@@ -10,7 +10,8 @@ import {
   decimal,
   boolean,
   uuid,
-  date
+  date,
+  uniqueIndex
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -101,7 +102,9 @@ export const responses = pgTable("responses", {
   questionId: uuid("question_id").references(() => questions.id).notNull(),
   answer: jsonb("answer").notNull(), // Flexible storage for different answer types
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("unique_user_question").on(table.endUserId, table.questionId),
+]);
 
 // Offers management
 export const offers = pgTable("offers", {

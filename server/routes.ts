@@ -671,7 +671,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: offer.name,
         description: offer.description,
         imageUrl: offer.imageUrl,
+        clickUrl: offer.clickUrl,
         category: offer.category,
+        offerType: offer.offerType,
+        displayPages: offer.displayPages,
+        position: offer.position,
         rating: offer.rating || 4.5,
         originalPrice: offer.originalPrice || '$99.99',
         discountPrice: offer.discountPrice || '$19.99',
@@ -690,8 +694,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const offers = await storage.getOffers(true); // Active offers only
       
-      // Filter for exit offers only
-      const exitOffers = offers.filter(offer => offer.offerType === 'exit');
+      // Filter for offers that display on page 20 (exit page)
+      const exitOffers = offers.filter(offer => offer.displayPages?.includes(20));
       
       // Return safe public fields for exit lottery
       const publicExitOffers = exitOffers.map(offer => ({

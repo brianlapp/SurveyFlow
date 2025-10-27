@@ -76,10 +76,10 @@ export default function Survey({ params }: SurveyProps) {
     enabled: currentStep === 2,
   });
 
-  // Fetch offers for Step 3
+  // Fetch offers for Steps 2 and 3 (survey questions and main offers)
   const { data: offers, isLoading: offersLoading } = useQuery<PublicOffer[]>({
     queryKey: ['/api/offers/public'],
-    enabled: currentStep === 3,
+    enabled: currentStep >= 2,
   });
 
   // Countdown timer effect
@@ -252,9 +252,15 @@ export default function Survey({ params }: SurveyProps) {
   }, [sessionId, setLocation]);
 
   useEffect(() => {
-    if (offers && offers.length > 0 && currentStep === 3) {
-      // Sort offers for optimal display using public display fields
-      const sortedOffers = [...offers].sort((a, b) => {
+    if (offers && offers.length > 0 && (currentStep === 2 || currentStep === 3)) {
+      // Determine which page number based on current step
+      const pageNumber = currentStep === 2 ? 10 : 15; // Step 2 = page 10 (survey), Step 3 = page 15 (main offers)
+      
+      // Filter offers by displayPages for current page
+      const pageOffers = offers.filter(offer => offer.displayPages?.includes(pageNumber));
+      
+      // Sort filtered offers for optimal display using public display fields
+      const sortedOffers = [...pageOffers].sort((a, b) => {
         const aSavings = parseFloat(a.originalPrice?.replace('$', '') || '0') - parseFloat(a.discountPrice?.replace('$', '') || '0');
         const bSavings = parseFloat(b.originalPrice?.replace('$', '') || '0') - parseFloat(b.discountPrice?.replace('$', '') || '0');
         
@@ -271,6 +277,9 @@ export default function Survey({ params }: SurveyProps) {
       });
       
       setCurrentOffers(sortedOffers.slice(0, 6)); // Show up to 6 offers with varied layout
+    } else {
+      // Clear offers when not on steps 2 or 3
+      setCurrentOffers([]);
     }
   }, [offers, currentStep]);
 
@@ -738,6 +747,45 @@ export default function Survey({ params }: SurveyProps) {
               productImage={productImage}
               isLoading={false}
             />
+
+            {/* Survey Page Offers (Page 10) */}
+            {currentOffers.length > 0 && (
+              <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-900 mb-3">Special Offers Available</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {currentOffers.slice(0, 4).map((offer) => (
+                    <div 
+                      key={offer.id}
+                      className="p-3 bg-white rounded border hover:shadow-md transition-shadow"
+                      data-testid={`offer-item-${offer.id}`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-semibold">{offer.name}</span>
+                      </div>
+                      {offer.description && (
+                        <p className="text-xs text-gray-600 mb-2">{offer.description}</p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-green-600 font-semibold">
+                          {offer.discountPrice}
+                        </span>
+                        {offer.clickUrl && (
+                          <a 
+                            href={offer.clickUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline"
+                            data-testid={`offer-link-${offer.id}`}
+                          >
+                            View Offer
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
 
