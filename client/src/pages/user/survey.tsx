@@ -835,22 +835,11 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
               }
               
               if (offer.offerType === 'popup_script' && offer.scriptContent) {
-                // Popup script - execute when component mounts
+                // Popup script - inject HTML directly (may contain <script> tags)
                 return (
                   <div 
-                    key={offer.id} 
-                    ref={(el) => {
-                      if (el && offer.scriptContent) {
-                        // Execute popup script
-                        try {
-                          const script = document.createElement('script');
-                          script.textContent = offer.scriptContent;
-                          el.appendChild(script);
-                        } catch (error) {
-                          console.error('Error executing popup script:', error);
-                        }
-                      }
-                    }}
+                    key={offer.id}
+                    dangerouslySetInnerHTML={{ __html: offer.scriptContent }}
                     data-testid={`popup-offer-${offer.id}`}
                   />
                 );
