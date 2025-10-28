@@ -15,6 +15,7 @@ interface SurveyStepProps {
   canGoBack?: boolean;
   isLoading?: boolean;
   productImage?: string;
+  offersContent?: React.ReactNode;
 }
 
 export function SurveyStep({ 
@@ -23,7 +24,8 @@ export function SurveyStep({
   onPrevious, 
   canGoBack = false,
   isLoading = false,
-  productImage 
+  productImage,
+  offersContent
 }: SurveyStepProps) {
   const [answer, setAnswer] = useState<any>(null);
   const [multipleSelections, setMultipleSelections] = useState<string[]>([]);
@@ -189,6 +191,13 @@ export function SurveyStep({
       <div className="mb-8">
         {renderQuestionInput()}
       </div>
+      
+      {/* Offers rendered before navigation buttons */}
+      {offersContent && (
+        <div className="mb-6">
+          {offersContent}
+        </div>
+      )}
       
       <div className="flex items-center justify-between">
         <Button

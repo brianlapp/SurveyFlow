@@ -788,32 +788,15 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
           );
         }
 
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold mb-2">Survey Questions</h3>
-              <p className="text-gray-600">
-                Question {currentQuestionIndex + 1} of {questions.length}
-              </p>
-            </div>
-            
-            <SurveyStep
-              key={currentQuestion.id}
-              question={currentQuestion}
-              onNext={handleSurveyAnswer}
-              onPrevious={handleSurveyPrevious}
-              canGoBack={currentQuestionIndex > 0 || currentStep > 1}
-              productImage={productImage}
-              isLoading={false}
-            />
-
-            {/* Survey Page Offers (Page 10) - Render by Type */}
-            {currentOffers.length > 0 && currentOffers.map((offer) => {
+        // Prepare offers content to inject inside the survey question block
+        const offersContent = currentOffers.length > 0 ? (
+          <>
+            {currentOffers.map((offer) => {
               // Render based on offer type
               if (offer.offerType === 'tune_standard' && offer.clickUrl) {
                 // Display ad injected inline as iframe
                 return (
-                  <div key={offer.id} className="mt-6 mb-6" data-testid={`offer-display-${offer.id}`}>
+                  <div key={offer.id} className="mt-4 mb-4" data-testid={`offer-display-${offer.id}`}>
                     {offer.impressionPixel && (
                       <img 
                         src={offer.impressionPixel} 
@@ -847,7 +830,7 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
               if (offer.offerType === 'next_link' && offer.clickUrl) {
                 // Next link - show as prominent button
                 return (
-                  <div key={offer.id} className="mt-6 mb-6 text-center" data-testid={`nextlink-offer-${offer.id}`}>
+                  <div key={offer.id} className="mt-4 mb-4 text-center" data-testid={`nextlink-offer-${offer.id}`}>
                     <a
                       href={offer.clickUrl}
                       target="_blank"
@@ -871,6 +854,28 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
               
               return null;
             })}
+          </>
+        ) : null;
+
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h3 className="text-lg font-semibold mb-2">Survey Questions</h3>
+              <p className="text-gray-600">
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </p>
+            </div>
+            
+            <SurveyStep
+              key={currentQuestion.id}
+              question={currentQuestion}
+              onNext={handleSurveyAnswer}
+              onPrevious={handleSurveyPrevious}
+              canGoBack={currentQuestionIndex > 0 || currentStep > 1}
+              productImage={productImage}
+              isLoading={false}
+              offersContent={offersContent}
+            />
           </div>
         );
 
