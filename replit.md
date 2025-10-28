@@ -4,8 +4,12 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (October 27, 2025)
-- **Survey Flow Preview Tool**: New admin preview mode at `/admin/survey-preview` allows testing the complete survey flow without filling out forms or recording data. Features include quick navigation between pages (Registration → Survey → Offers → Exit), live display of which offers appear on each page based on displayPages configuration, and summary statistics. Accessible via "Preview Survey Flow" button on admin dashboard. Supports page mapping: 5=Registration, 10=Survey, 15=Offers, 20=Exit.
+## Latest Updates (October 28, 2025)
+- **Live Preview Mode**: New admin feature at `/admin/live-preview` renders the exact user-facing survey experience without saving any data to the database. Click "Live Preview" button on admin dashboard to test the real survey flow with auto-fill on Continue clicks, instant navigation through all steps, and zero database pollution. All mutations (profile updates, survey responses, offer interactions) are safely skipped in preview mode.
+- **DisplayPages Offer Filtering**: Fixed survey questions page (Step 2) to display offers filtered by displayPages settings. Offers now properly appear on three pages: survey questions (page 10), main offers (page 15), and exit lottery (page 20). Backend includes displayPages in API responses, frontend filters offers by current page number.
+
+## Previous Updates (October 27, 2025)
+- **Survey Flow Preview Tool**: Admin stats view at `/admin/survey-preview` showing which offers appear on each page based on displayPages configuration with summary statistics
 - **Universal Tune Pixel Auto-Generation**: Enhanced automatic impression pixel generation to work with ANY Tune tracking domain (previously limited to go2cloud.org). Now detects path-based `/aff_c` pattern, supporting track.modemobile.com, go2cloud.org, and all other Tune/HasOffers domains. Maintains smart features: auto-generation with cachebuster, manual edit preservation, and clearing on URL changes.
 
 ## Previous Updates (October 2, 2025)
