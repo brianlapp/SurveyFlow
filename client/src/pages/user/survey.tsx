@@ -32,9 +32,10 @@ interface SurveyProps {
   params?: {
     sessionId?: string;
   };
+  previewMode?: boolean;
 }
 
-export default function Survey({ params }: SurveyProps) {
+export default function Survey({ params, previewMode = false }: SurveyProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -62,11 +63,11 @@ export default function Survey({ params }: SurveyProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [surveyAnswers, setSurveyAnswers] = useState<Record<string, any>>({});
 
-  // Fetch user session with correct endpoint format
+  // Fetch user session with correct endpoint format (skip in preview mode)
   const { data: userSession, isLoading: sessionLoading } = useQuery<EndUser>({
     queryKey: ['/api/user/session', sessionId],
     queryFn: () => apiRequest('GET', `/api/user/session/${sessionId}`).then(res => res.json()),
-    enabled: !!sessionId,
+    enabled: !!sessionId && !previewMode,
   });
 
   // Fetch questions for Step 2
@@ -288,6 +289,41 @@ export default function Survey({ params }: SurveyProps) {
   };
 
   const handleContinue = () => {
+    // PREVIEW MODE: Auto-fill and skip saves
+    if (previewMode) {
+      if (currentStep === 1) {
+        // Auto-fill registration data
+        setFormData({
+          firstName: "John",
+          lastName: "Smith",
+          birthMonth: "5",
+          birthDay: "15",
+          birthYear: "1990",
+          gender: "male",
+          address: "123 Main St",
+          city: "New York",
+          state: "NY",
+          zip: "10001",
+          phone: "5551234567"
+        });
+        setCurrentStep(2);
+        return;
+      } else if (currentStep === 2) {
+        // Skip to offers
+        setCurrentStep(3);
+        return;
+      } else if (currentStep === 3) {
+        // Show exit page
+        toast({
+          title: "Preview Complete!",
+          description: "In real mode, users would now see the exit lottery.",
+        });
+        setLocation(`/exit/${sessionId}`);
+        return;
+      }
+    }
+    
+    // NORMAL MODE (not preview)
     // Step 3 (Offers) should complete the order without updating profile
     if (currentStep === 3) {
       // Set completion state to prevent session sync interference
@@ -346,13 +382,25 @@ export default function Survey({ params }: SurveyProps) {
     
     const currentQuestion = questions[currentQuestionIndex];
     
-    // Save answer
+    // Save answer in local state
     setSurveyAnswers(prev => ({
       ...prev,
       [currentQuestion.id]: answer
     }));
 
-    // Submit answer to backend
+    // PREVIEW MODE: Skip database save
+    if (previewMode) {
+      // Move to next question or complete survey
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+      } else {
+        // All questions completed, move to step 3
+        setCurrentStep(3);
+      }
+      return;
+    }
+
+    // NORMAL MODE: Submit answer to backend
     try {
       await apiRequest('POST', '/api/user/response', {
         sessionId: sessionId,

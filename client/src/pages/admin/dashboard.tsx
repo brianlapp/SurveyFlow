@@ -75,18 +75,26 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6" data-testid="dashboard-page">
-      {/* Header with Preview Button */}
+      {/* Header with Preview Buttons */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground mt-1">Overview of your survey performance</p>
         </div>
-        <Link href="/admin/survey-preview">
-          <Button className="gap-2" data-testid="button-preview-survey">
-            <Eye className="h-4 w-4" />
-            Preview Survey Flow
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/admin/survey-preview">
+            <Button variant="outline" className="gap-2" data-testid="button-preview-survey">
+              <Eye className="h-4 w-4" />
+              Survey Flow Stats
+            </Button>
+          </Link>
+          <Link href="/admin/live-preview">
+            <Button className="gap-2" data-testid="button-live-preview">
+              <Eye className="h-4 w-4" />
+              Live Preview
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Metrics Grid */}
