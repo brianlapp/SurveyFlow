@@ -679,6 +679,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rating: offer.rating || 4.5,
         originalPrice: offer.originalPrice || '$99.99',
         discountPrice: offer.discountPrice || '$19.99',
+        scriptContent: offer.scriptContent, // For popup_script offers
+        linkText: offer.linkText, // For next_link offers
+        impressionPixel: offer.impressionPixel, // For tune_standard tracking
         // Exclude sensitive fields: payout, conversionUrl, etc.
       }));
       

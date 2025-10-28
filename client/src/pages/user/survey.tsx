@@ -807,44 +807,82 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
               isLoading={false}
             />
 
-            {/* Survey Page Offers (Page 10) */}
-            {currentOffers.length > 0 && (
-              <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-blue-900 mb-3">Special Offers Available</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {currentOffers.slice(0, 4).map((offer) => (
-                    <div 
-                      key={offer.id}
-                      className="p-3 bg-white rounded border hover:shadow-md transition-shadow"
-                      data-testid={`offer-item-${offer.id}`}
+            {/* Survey Page Offers (Page 10) - Render by Type */}
+            {currentOffers.length > 0 && currentOffers.map((offer) => {
+              // Render based on offer type
+              if (offer.offerType === 'tune_standard' && offer.clickUrl) {
+                // Display ad injected inline as iframe
+                return (
+                  <div key={offer.id} className="mt-6 mb-6" data-testid={`offer-display-${offer.id}`}>
+                    {offer.impressionPixel && (
+                      <img 
+                        src={offer.impressionPixel} 
+                        alt="" 
+                        style={{ display: 'none' }} 
+                        onLoad={() => console.log(`Impression pixel loaded for ${offer.name}`)}
+                      />
+                    )}
+                    <iframe
+                      src={offer.clickUrl}
+                      className="w-full rounded-lg border-2 border-blue-300"
+                      style={{ height: '300px', minHeight: '200px' }}
+                      title={offer.name}
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                      data-testid={`iframe-offer-${offer.id}`}
+                    />
+                  </div>
+                );
+              }
+              
+              if (offer.offerType === 'popup_script' && offer.scriptContent) {
+                // Popup script - execute when component mounts
+                return (
+                  <div 
+                    key={offer.id} 
+                    ref={(el) => {
+                      if (el && offer.scriptContent) {
+                        // Execute popup script
+                        try {
+                          const script = document.createElement('script');
+                          script.textContent = offer.scriptContent;
+                          el.appendChild(script);
+                        } catch (error) {
+                          console.error('Error executing popup script:', error);
+                        }
+                      }
+                    }}
+                    data-testid={`popup-offer-${offer.id}`}
+                  />
+                );
+              }
+              
+              if (offer.offerType === 'next_link' && offer.clickUrl) {
+                // Next link - show as prominent button
+                return (
+                  <div key={offer.id} className="mt-6 mb-6 text-center" data-testid={`nextlink-offer-${offer.id}`}>
+                    <a
+                      href={offer.clickUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-6 py-3 text-lg font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
+                      onClick={() => {
+                        if (!previewMode) {
+                          offerInteractionMutation.mutate({
+                            offerId: offer.id,
+                            interactionType: 'click',
+                          });
+                        }
+                      }}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-semibold">{offer.name}</span>
-                      </div>
-                      {offer.description && (
-                        <p className="text-xs text-gray-600 mb-2">{offer.description}</p>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-green-600 font-semibold">
-                          {offer.discountPrice}
-                        </span>
-                        {offer.clickUrl && (
-                          <a 
-                            href={offer.clickUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:underline"
-                            data-testid={`offer-link-${offer.id}`}
-                          >
-                            View Offer
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                      {offer.linkText || 'Next'}
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
+                  </div>
+                );
+              }
+              
+              return null;
+            })}
           </div>
         );
 
