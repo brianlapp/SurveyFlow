@@ -827,7 +827,6 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
                       className="w-full rounded-lg border-2 border-blue-300"
                       style={{ height: '300px', minHeight: '200px' }}
                       title={offer.name}
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                       data-testid={`iframe-offer-${offer.id}`}
                     />
                   </div>
