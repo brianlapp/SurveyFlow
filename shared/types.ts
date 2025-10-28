@@ -11,4 +11,5 @@ export interface PublicOffer {
   clickUrl?: string;
   position?: number;
   offerType?: string;
+  displayPages?: number[];
 }

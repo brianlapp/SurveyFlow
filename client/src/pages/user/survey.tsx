@@ -234,8 +234,10 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
     },
   });
 
-  // Enhanced session validation and navigation guard
+  // Enhanced session validation and navigation guard (skip in preview mode)
   useEffect(() => {
+    if (previewMode) return; // Skip validation in preview mode
+    
     if (!sessionId) {
       console.warn('No session ID provided, redirecting to registration');
       setLocation('/register');
@@ -442,48 +444,57 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
   };
 
   const handleOfferClick = (offer: PublicOffer) => {
-    // Track click
-    offerInteractionMutation.mutate({
-      offerId: offer.id,
-      interactionType: 'click',
-    });
+    // PREVIEW MODE: Skip database tracking
+    if (!previewMode) {
+      // Track click
+      offerInteractionMutation.mutate({
+        offerId: offer.id,
+        interactionType: 'click',
+      });
+    }
     
     // Open offer in new tab
     window.open(offer.clickUrl || '#', '_blank');
   };
 
   const handleOfferConversion = (offer: PublicOffer) => {
-    // Conversions are now server-side only - just track interaction
-    offerInteractionMutation.mutate({
-      offerId: offer.id,
-      interactionType: 'click',
-    });
+    // PREVIEW MODE: Skip database tracking
+    if (!previewMode) {
+      // Conversions are now server-side only - just track interaction
+      offerInteractionMutation.mutate({
+        offerId: offer.id,
+        interactionType: 'click',
+      });
+    }
   };
 
-  if (sessionLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-mint-light">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your order...</p>
+  // Skip session loading/validation checks in preview mode
+  if (!previewMode) {
+    if (sessionLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-mint-light">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your order...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!userSession) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-mint-light">
-        <Card className="w-full max-w-md mx-4">
-          <CardContent className="pt-6 text-center">
-            <p className="text-gray-600 mb-4">Session not found or expired.</p>
-            <Button onClick={() => setLocation('/register')} data-testid="button-restart">
-              Start New Order
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    if (!userSession) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-mint-light">
+          <Card className="w-full max-w-md mx-4">
+            <CardContent className="pt-6 text-center">
+              <p className="text-gray-600 mb-4">Session not found or expired.</p>
+              <Button onClick={() => setLocation('/register')} data-testid="button-restart">
+                Start New Order
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
   }
 
   if (isCompleted) {
@@ -517,7 +528,7 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
               
               <div className="space-y-3">
                 <p className="text-sm text-gray-600">
-                  Order ID: #{userSession.sessionId?.slice(-8).toUpperCase()}
+                  Order ID: #{(userSession?.sessionId || sessionId)?.slice(-8).toUpperCase()}
                 </p>
                 <p className="text-sm text-gray-600">
                   You will receive an email confirmation shortly.
