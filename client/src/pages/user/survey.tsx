@@ -762,8 +762,8 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
             {/* Step 1 Offers (Page 5) - Render by Type */}
             {currentOffers.length > 0 && currentOffers.map((offer) => {
               // Render based on offer type
-              if (offer.offerType === 'tune_standard' && offer.clickUrl) {
-                // Display ad injected inline as iframe
+              if (offer.offerType === 'tune_standard' && offer.imageUrl) {
+                // Display ad with clickable image
                 return (
                   <div key={offer.id} className="mt-6 mb-6" data-testid={`offer-display-${offer.id}`}>
                     {offer.impressionPixel && (
@@ -774,13 +774,27 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
                         onLoad={() => console.log(`Impression pixel loaded for ${offer.name}`)}
                       />
                     )}
-                    <iframe
-                      src={offer.clickUrl}
-                      className="w-full rounded-lg border-2 border-blue-300"
-                      style={{ height: '300px', minHeight: '200px' }}
-                      title={offer.name}
-                      data-testid={`iframe-offer-${offer.id}`}
-                    />
+                    <a
+                      href={offer.clickUrl || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        if (!previewMode) {
+                          offerInteractionMutation.mutate({
+                            offerId: offer.id,
+                            interactionType: 'click',
+                          });
+                        }
+                      }}
+                      data-testid={`offer-link-${offer.id}`}
+                    >
+                      <img
+                        src={offer.imageUrl}
+                        alt={offer.name}
+                        className="w-full rounded-lg border-2 border-blue-300 hover:border-blue-500 transition-colors cursor-pointer"
+                        data-testid={`offer-image-${offer.id}`}
+                      />
+                    </a>
                   </div>
                 );
               }
@@ -873,8 +887,8 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
           <>
             {currentOffers.map((offer) => {
               // Render based on offer type
-              if (offer.offerType === 'tune_standard' && offer.clickUrl) {
-                // Display ad injected inline as iframe
+              if (offer.offerType === 'tune_standard' && offer.imageUrl) {
+                // Display ad with clickable image
                 return (
                   <div key={offer.id} className="mt-4 mb-4" data-testid={`offer-display-${offer.id}`}>
                     {offer.impressionPixel && (
@@ -885,13 +899,27 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
                         onLoad={() => console.log(`Impression pixel loaded for ${offer.name}`)}
                       />
                     )}
-                    <iframe
-                      src={offer.clickUrl}
-                      className="w-full rounded-lg border-2 border-blue-300"
-                      style={{ height: '300px', minHeight: '200px' }}
-                      title={offer.name}
-                      data-testid={`iframe-offer-${offer.id}`}
-                    />
+                    <a
+                      href={offer.clickUrl || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        if (!previewMode) {
+                          offerInteractionMutation.mutate({
+                            offerId: offer.id,
+                            interactionType: 'click',
+                          });
+                        }
+                      }}
+                      data-testid={`offer-link-${offer.id}`}
+                    >
+                      <img
+                        src={offer.imageUrl}
+                        alt={offer.name}
+                        className="w-full rounded-lg border-2 border-blue-300 hover:border-blue-500 transition-colors cursor-pointer"
+                        data-testid={`offer-image-${offer.id}`}
+                      />
+                    </a>
                   </div>
                 );
               }
