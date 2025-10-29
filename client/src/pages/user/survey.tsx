@@ -77,10 +77,9 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
     enabled: currentStep === 2,
   });
 
-  // Fetch offers for Steps 2 and 3 (survey questions and main offers)
+  // Fetch offers for all steps (page-based filtering in useEffect)
   const { data: offers, isLoading: offersLoading } = useQuery<PublicOffer[]>({
     queryKey: ['/api/offers/public'],
-    enabled: currentStep >= 2,
   });
 
   // Countdown timer effect
@@ -255,33 +254,40 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
   }, [sessionId, setLocation]);
 
   useEffect(() => {
-    if (offers && offers.length > 0 && (currentStep === 2 || currentStep === 3)) {
-      // Determine which page number based on current step
-      const pageNumber = currentStep === 2 ? 10 : 15; // Step 2 = page 10 (survey), Step 3 = page 15 (main offers)
+    if (offers && offers.length > 0) {
+      // Map step to page number: Step 1 = page 5, Step 2 = page 10, Step 3 = page 15
+      let pageNumber = 0;
+      if (currentStep === 1) pageNumber = 5;  // Registration
+      else if (currentStep === 2) pageNumber = 10; // Survey Questions  
+      else if (currentStep === 3) pageNumber = 15; // Main Offers
       
-      // Filter offers by displayPages for current page
-      const pageOffers = offers.filter(offer => offer.displayPages?.includes(pageNumber));
-      
-      // Sort filtered offers for optimal display using public display fields
-      const sortedOffers = [...pageOffers].sort((a, b) => {
-        const aSavings = parseFloat(a.originalPrice?.replace('$', '') || '0') - parseFloat(a.discountPrice?.replace('$', '') || '0');
-        const bSavings = parseFloat(b.originalPrice?.replace('$', '') || '0') - parseFloat(b.discountPrice?.replace('$', '') || '0');
+      if (pageNumber > 0) {
+        // Filter offers by displayPages for current page
+        const pageOffers = offers.filter(offer => offer.displayPages?.includes(pageNumber));
         
-        // Premium offers (high savings) first
-        if (aSavings >= 50 && bSavings < 50) return -1;
-        if (bSavings >= 50 && aSavings < 50) return 1;
+        // Sort filtered offers for optimal display using public display fields
+        const sortedOffers = [...pageOffers].sort((a, b) => {
+          const aSavings = parseFloat(a.originalPrice?.replace('$', '') || '0') - parseFloat(a.discountPrice?.replace('$', '') || '0');
+          const bSavings = parseFloat(b.originalPrice?.replace('$', '') || '0') - parseFloat(b.discountPrice?.replace('$', '') || '0');
+          
+          // Premium offers (high savings) first
+          if (aSavings >= 50 && bSavings < 50) return -1;
+          if (bSavings >= 50 && aSavings < 50) return 1;
+          
+          // Featured offers (high rating or position 1) next
+          if ((a.rating >= 4.5 || a.position === 1) && !(b.rating >= 4.5 || b.position === 1)) return -1;
+          if ((b.rating >= 4.5 || b.position === 1) && !(a.rating >= 4.5 || a.position === 1)) return 1;
+          
+          // Sort by savings amount descending
+          return bSavings - aSavings;
+        });
         
-        // Featured offers (high rating or position 1) next
-        if ((a.rating >= 4.5 || a.position === 1) && !(b.rating >= 4.5 || b.position === 1)) return -1;
-        if ((b.rating >= 4.5 || b.position === 1) && !(a.rating >= 4.5 || a.position === 1)) return 1;
-        
-        // Sort by savings amount descending
-        return bSavings - aSavings;
-      });
-      
-      setCurrentOffers(sortedOffers.slice(0, 6)); // Show up to 6 offers with varied layout
+        setCurrentOffers(sortedOffers.slice(0, 6)); // Show up to 6 offers with varied layout
+        console.log(`Filtered ${sortedOffers.length} offers for page ${pageNumber} (step ${currentStep})`);
+      } else {
+        setCurrentOffers([]);
+      }
     } else {
-      // Clear offers when not on steps 2 or 3
       setCurrentOffers([]);
     }
   }, [offers, currentStep]);
@@ -743,6 +749,71 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
                 </div>
               </div>
             </div>
+
+            {/* Step 1 Offers (Page 5) - Render by Type */}
+            {currentOffers.length > 0 && currentOffers.map((offer) => {
+              // Render based on offer type
+              if (offer.offerType === 'tune_standard' && offer.clickUrl) {
+                // Display ad injected inline as iframe
+                return (
+                  <div key={offer.id} className="mt-6 mb-6" data-testid={`offer-display-${offer.id}`}>
+                    {offer.impressionPixel && (
+                      <img 
+                        src={offer.impressionPixel} 
+                        alt="" 
+                        style={{ display: 'none' }} 
+                        onLoad={() => console.log(`Impression pixel loaded for ${offer.name}`)}
+                      />
+                    )}
+                    <iframe
+                      src={offer.clickUrl}
+                      className="w-full rounded-lg border-2 border-blue-300"
+                      style={{ height: '300px', minHeight: '200px' }}
+                      title={offer.name}
+                      data-testid={`iframe-offer-${offer.id}`}
+                    />
+                  </div>
+                );
+              }
+              
+              if (offer.offerType === 'popup_script' && offer.scriptContent) {
+                // Popup script - inject HTML directly (may contain <script> tags)
+                return (
+                  <div 
+                    key={offer.id}
+                    dangerouslySetInnerHTML={{ __html: offer.scriptContent }}
+                    data-testid={`popup-offer-${offer.id}`}
+                  />
+                );
+              }
+              
+              if (offer.offerType === 'next_link' && offer.clickUrl) {
+                // Next link - show as prominent button
+                return (
+                  <div key={offer.id} className="mt-6 mb-6 text-center" data-testid={`nextlink-offer-${offer.id}`}>
+                    <a
+                      href={offer.clickUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-6 py-3 text-lg font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
+                      onClick={() => {
+                        if (!previewMode) {
+                          offerInteractionMutation.mutate({
+                            offerId: offer.id,
+                            interactionType: 'click',
+                          });
+                        }
+                      }}
+                    >
+                      {offer.linkText || 'Next'}
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
+                  </div>
+                );
+              }
+              
+              return null;
+            })}
           </div>
         );
 
