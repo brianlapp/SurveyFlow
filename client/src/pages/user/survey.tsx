@@ -26,7 +26,7 @@ import {
 import type { EndUser, Offer, Question } from "@shared/schema";
 import type { PublicOffer } from "@shared/types";
 import brandLogo from "@assets/brand-logo.png";
-import productImage from "@assets/stock_images/pink_slides_sandals__9c5591d5.jpg";
+import productImage from "@assets/pink-slides.png";
 
 interface SurveyProps {
   params?: {
@@ -573,9 +573,18 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
       case 1:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold mb-6">
-              Complete your details to claim your free product
-            </h3>
+            {/* Product Giveaway Image */}
+            <div className="flex flex-col items-center mb-6">
+              <img 
+                src={productImage} 
+                alt="Product Giveaway"
+                className="w-48 h-48 rounded-lg object-cover border-4 border-teal-primary mb-4"
+                data-testid="product-giveaway-image"
+              />
+              <h3 className="text-lg font-semibold text-center">
+                Fill in your details to process your Product Giveaway order
+              </h3>
+            </div>
             
             {/* Personal Information */}
             <div className="space-y-4">
