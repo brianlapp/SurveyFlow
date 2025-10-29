@@ -16,6 +16,7 @@ interface SurveyStepProps {
   isLoading?: boolean;
   productImage?: string;
   offersContent?: React.ReactNode;
+  previewMode?: boolean;
 }
 
 export function SurveyStep({ 
@@ -25,12 +26,30 @@ export function SurveyStep({
   canGoBack = false,
   isLoading = false,
   productImage,
-  offersContent
+  offersContent,
+  previewMode = false
 }: SurveyStepProps) {
   const [answer, setAnswer] = useState<any>(null);
   const [multipleSelections, setMultipleSelections] = useState<string[]>([]);
 
   const handleNext = () => {
+    // In preview mode, auto-generate a valid answer
+    if (previewMode) {
+      let autoAnswer;
+      if (question.type === 'yes_no') {
+        autoAnswer = 'yes';
+      } else if (question.type === 'multiple_choice' && Array.isArray(question.options) && question.options.length > 0) {
+        autoAnswer = question.options[0];
+      } else if (question.type === 'multiple_select' && Array.isArray(question.options) && question.options.length > 0) {
+        autoAnswer = [question.options[0]];
+      } else {
+        autoAnswer = 'Preview mode auto-fill';
+      }
+      onNext(autoAnswer);
+      return;
+    }
+    
+    // Normal mode: validate answers
     let finalAnswer = answer;
     
     if (question.type === 'multiple_select') {
@@ -156,7 +175,7 @@ export function SurveyStep({
     return answer !== null && answer !== "";
   };
 
-  const canProceed = !question.isRequired || isAnswered();
+  const canProceed = previewMode || !question.isRequired || isAnswered();
 
   return (
     <div className="survey-step p-6 rounded-lg max-w-2xl mx-auto" data-testid="survey-step">

@@ -875,6 +875,7 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
               productImage={productImage}
               isLoading={false}
               offersContent={offersContent}
+              previewMode={previewMode}
             />
           </div>
         );
