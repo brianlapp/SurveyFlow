@@ -642,12 +642,12 @@ export default function Offers() {
                   ))}
                 </div>
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded">
-                  ⚠️ For survey questions, use "Question Display" section below - NOT this section
+                  ⚠️ For survey questions, use "Display on Questions" section below - NOT this section
                 </p>
               </div>
 
               <div>
-                <FormLabel>Question Display</FormLabel>
+                <FormLabel>Display on Questions</FormLabel>
                 <p className="text-sm text-muted-foreground mb-2">
                   Show this offer after specific questions (overrides page-based targeting)
                 </p>
@@ -940,7 +940,7 @@ export default function Offers() {
                 name="questionIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Question Display</FormLabel>
+                    <FormLabel>Display on Questions</FormLabel>
                     <p className="text-sm text-muted-foreground mb-2">
                       Show this offer after specific questions (overrides page-based targeting)
                     </p>
