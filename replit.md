@@ -4,7 +4,12 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (October 28, 2025)
+## Latest Updates (October 30, 2025)
+- **Enhanced Offers Card Layout**: Redesigned offers page with visual preview boxes showing what each offer looks like. Each card displays a preview (images for tune_standard, code snippets for popup_script, buttons for next_link), stats in a 2x2 grid (conversion rate, revenue, conversions, position), and clear targeting information with badges distinguishing page-based vs question-based targeting. All preview boxes use consistent aspect-video containers for uniform card heights and better grid alignment.
+- **Improved Offer Form Labels**: Updated targeting section labels to "Display on Pages (Non Survey Questions)" and "Display on Questions" for clearer distinction between one-time page-based targeting and question-specific targeting.
+- **Form Bug Fixes**: Fixed checkbox unchecking bug in page display selector (was comparing number to object), and fixed description field to properly save empty/null values with clear "(Optional)" labeling.
+
+## Previous Updates (October 28, 2025)
 - **Live Preview Mode**: New admin feature at `/admin/live-preview` renders the exact user-facing survey experience without saving any data to the database. Click "Live Preview" button on admin dashboard to test the real survey flow with auto-fill on Continue clicks, instant navigation through all steps, and zero database pollution. All mutations (profile updates, survey responses, offer interactions) are safely skipped in preview mode.
 - **DisplayPages Offer Filtering**: Fixed survey questions page (Step 2) to display offers filtered by displayPages settings. Offers now properly appear on three pages: survey questions (page 10), main offers (page 15), and exit lottery (page 20). Backend includes displayPages in API responses, frontend filters offers by current page number.
 
