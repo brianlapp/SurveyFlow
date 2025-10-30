@@ -675,6 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: offer.category,
         offerType: offer.offerType,
         displayPages: offer.displayPages,
+        questionIds: offer.questionIds, // Question-based targeting
         position: offer.position,
         rating: offer.rating || 4.5,
         originalPrice: offer.originalPrice || '$99.99',

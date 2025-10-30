@@ -122,6 +122,7 @@ export const offers = pgTable("offers", {
   linkText: varchar("link_text", { length: 100 }).default('Next'), // Text for next_link type
   triggerSettings: jsonb("trigger_settings"), // When/where offer displays: { triggerType, triggerValue, displayLocation }
   displayPages: integer("display_pages").array(), // Pages where offer should appear
+  questionIds: uuid("question_ids").array().default(sql`ARRAY[]::uuid[]`), // Specific questions after which offer should appear
   position: integer("position").default(1), // Position on page
   demographics: jsonb("demographics"), // Target demographics
   geoTargeting: jsonb("geo_targeting"), // Geographic targeting

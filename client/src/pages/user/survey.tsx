@@ -255,42 +255,58 @@ export default function Survey({ params, previewMode = false }: SurveyProps) {
 
   useEffect(() => {
     if (offers && offers.length > 0) {
-      // Map step to page number: Step 1 = page 5, Step 2 = page 10, Step 3 = page 15
-      let pageNumber = 0;
-      if (currentStep === 1) pageNumber = 5;  // Registration
-      else if (currentStep === 2) pageNumber = 10; // Survey Questions  
-      else if (currentStep === 3) pageNumber = 15; // Main Offers
+      let filteredOffers: PublicOffer[] = [];
       
-      if (pageNumber > 0) {
-        // Filter offers by displayPages for current page
-        const pageOffers = offers.filter(offer => offer.displayPages?.includes(pageNumber));
+      // Question-based targeting: If on Step 2 (Survey Questions), check for question-specific offers
+      if (currentStep === 2 && questions && questions.length > 0 && currentQuestionIndex < questions.length) {
+        const currentQuestion = questions[currentQuestionIndex];
+        const questionTargetedOffers = offers.filter(offer => 
+          offer.questionIds && offer.questionIds.length > 0 && offer.questionIds.includes(currentQuestion.id)
+        );
         
-        // Sort filtered offers for optimal display using public display fields
-        const sortedOffers = [...pageOffers].sort((a, b) => {
-          const aSavings = parseFloat(a.originalPrice?.replace('$', '') || '0') - parseFloat(a.discountPrice?.replace('$', '') || '0');
-          const bSavings = parseFloat(b.originalPrice?.replace('$', '') || '0') - parseFloat(b.discountPrice?.replace('$', '') || '0');
-          
-          // Premium offers (high savings) first
-          if (aSavings >= 50 && bSavings < 50) return -1;
-          if (bSavings >= 50 && aSavings < 50) return 1;
-          
-          // Featured offers (high rating or position 1) next
-          if ((a.rating >= 4.5 || a.position === 1) && !(b.rating >= 4.5 || b.position === 1)) return -1;
-          if ((b.rating >= 4.5 || b.position === 1) && !(a.rating >= 4.5 || a.position === 1)) return 1;
-          
-          // Sort by savings amount descending
-          return bSavings - aSavings;
-        });
-        
-        setCurrentOffers(sortedOffers.slice(0, 6)); // Show up to 6 offers with varied layout
-        console.log(`Filtered ${sortedOffers.length} offers for page ${pageNumber} (step ${currentStep})`);
+        if (questionTargetedOffers.length > 0) {
+          // Question-specific offers found - use them (overrides page-based)
+          filteredOffers = questionTargetedOffers;
+          console.log(`Found ${questionTargetedOffers.length} question-specific offers for question ${currentQuestionIndex + 1}`);
+        } else {
+          // No question-specific offers - fall back to page-based (page 10)
+          filteredOffers = offers.filter(offer => offer.displayPages?.includes(10));
+          console.log(`No question-specific offers, using ${filteredOffers.length} page-based offers for page 10`);
+        }
       } else {
-        setCurrentOffers([]);
+        // Page-based targeting for Steps 1 and 3
+        let pageNumber = 0;
+        if (currentStep === 1) pageNumber = 5;  // Registration
+        else if (currentStep === 3) pageNumber = 15; // Main Offers
+        
+        if (pageNumber > 0) {
+          filteredOffers = offers.filter(offer => offer.displayPages?.includes(pageNumber));
+          console.log(`Filtered ${filteredOffers.length} offers for page ${pageNumber} (step ${currentStep})`);
+        }
       }
+      
+      // Sort filtered offers for optimal display
+      const sortedOffers = [...filteredOffers].sort((a, b) => {
+        const aSavings = parseFloat(a.originalPrice?.replace('$', '') || '0') - parseFloat(a.discountPrice?.replace('$', '') || '0');
+        const bSavings = parseFloat(b.originalPrice?.replace('$', '') || '0') - parseFloat(b.discountPrice?.replace('$', '') || '0');
+        
+        // Premium offers (high savings) first
+        if (aSavings >= 50 && bSavings < 50) return -1;
+        if (bSavings >= 50 && aSavings < 50) return 1;
+        
+        // Featured offers (high rating or position 1) next
+        if ((a.rating >= 4.5 || a.position === 1) && !(b.rating >= 4.5 || b.position === 1)) return -1;
+        if ((b.rating >= 4.5 || b.position === 1) && !(a.rating >= 4.5 || a.position === 1)) return 1;
+        
+        // Sort by savings amount descending
+        return bSavings - aSavings;
+      });
+      
+      setCurrentOffers(sortedOffers.slice(0, 6)); // Show up to 6 offers
     } else {
       setCurrentOffers([]);
     }
-  }, [offers, currentStep]);
+  }, [offers, currentStep, currentQuestionIndex, questions]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

@@ -19,6 +19,7 @@ import { z } from "zod";
 
 const createOfferFormSchema = insertOfferSchema.extend({
   displayPages: z.array(z.number()).optional(),
+  questionIds: z.array(z.string()).optional(),
 });
 
 type CreateOfferForm = z.infer<typeof createOfferFormSchema>;
@@ -41,6 +42,10 @@ export default function Offers() {
 
   const { data: offers, isLoading } = useQuery({
     queryKey: ['/api/offers'],
+  });
+
+  const { data: questions } = useQuery<any[]>({
+    queryKey: ['/api/questions'],
   });
 
   const createOfferMutation = useMutation({
@@ -101,6 +106,7 @@ export default function Offers() {
       linkText: 'Next',
       triggerSettings: null,
       displayPages: [],
+      questionIds: [],
       position: 1,
       isActive: true,
       isPaused: false,
@@ -178,6 +184,7 @@ export default function Offers() {
       linkText: 'Next',
       triggerSettings: null,
       displayPages: [],
+      questionIds: [],
       position: 1,
       isActive: true,
       isPaused: false,
@@ -221,6 +228,7 @@ export default function Offers() {
       linkText: offer.linkText || 'Next',
       triggerSettings: offer.triggerSettings || null,
       displayPages: offer.displayPages || [],
+      questionIds: offer.questionIds || [],
       position: offer.position || 1,
       isActive: offer.isActive,
       isPaused: offer.isPaused,
@@ -246,6 +254,7 @@ export default function Offers() {
       linkText: 'Next',
       triggerSettings: null,
       displayPages: [],
+      questionIds: [],
       position: 1,
       isActive: true,
       isPaused: false,
@@ -595,6 +604,7 @@ export default function Offers() {
               
               <div>
                 <FormLabel>Display Pages</FormLabel>
+                <p className="text-sm text-muted-foreground mb-2">Page-based targeting (5=Registration, 10=Survey, 15=Main Offers, 20=Exit)</p>
                 <div className="grid grid-cols-6 gap-2 mt-2">
                   {[5, 10, 15, 20, 25, 30].map((page) => (
                     <label key={page} className="flex items-center">
@@ -613,6 +623,36 @@ export default function Offers() {
                       <span className="ml-1">{page}</span>
                     </label>
                   ))}
+                </div>
+              </div>
+
+              <div>
+                <FormLabel>Question Display</FormLabel>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Show this offer after specific questions (overrides page-based targeting)
+                </p>
+                <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded p-2">
+                  {questions && questions.length > 0 ? (
+                    questions.map((question: any) => (
+                      <label key={question.id} className="flex items-start gap-2">
+                        <Checkbox
+                          checked={form.watch('questionIds')?.includes(question.id)}
+                          onCheckedChange={(checked) => {
+                            const current = form.getValues('questionIds') || [];
+                            if (checked) {
+                              form.setValue('questionIds', [...current, question.id]);
+                            } else {
+                              form.setValue('questionIds', current.filter((id: string) => id !== question.id));
+                            }
+                          }}
+                          data-testid={`checkbox-question-${question.id}`}
+                        />
+                        <span className="text-sm">Q{question.orderIndex + 1}: {question.text.substring(0, 50)}{question.text.length > 50 ? '...' : ''}</span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground col-span-2">No active questions available</p>
+                  )}
                 </div>
               </div>
               
@@ -831,6 +871,7 @@ export default function Offers() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Display Pages</FormLabel>
+                    <p className="text-sm text-muted-foreground mb-2">Page-based targeting (5=Registration, 10=Survey, 15=Main Offers, 20=Exit)</p>
                     <div className="grid grid-cols-6 gap-2 mt-2">
                       {[5, 10, 15, 20, 25, 30].map((page) => (
                         <label key={page} className="flex items-center">
@@ -849,6 +890,42 @@ export default function Offers() {
                           <span className="ml-1">{page}</span>
                         </label>
                       ))}
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="questionIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Question Display</FormLabel>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Show this offer after specific questions (overrides page-based targeting)
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded p-2">
+                      {questions && questions.length > 0 ? (
+                        questions.map((question: any) => (
+                          <label key={question.id} className="flex items-start gap-2">
+                            <Checkbox
+                              checked={(field.value || []).includes(question.id)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, question.id]);
+                                } else {
+                                  field.onChange(current.filter((id: string) => id !== question.id));
+                                }
+                              }}
+                              data-testid={`checkbox-question-${question.id}`}
+                            />
+                            <span className="text-sm">Q{question.orderIndex + 1}: {question.text.substring(0, 50)}{question.text.length > 50 ? '...' : ''}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground col-span-2">No active questions available</p>
+                      )}
                     </div>
                   </FormItem>
                 )}

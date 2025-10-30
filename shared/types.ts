@@ -12,6 +12,7 @@ export interface PublicOffer {
   position?: number;
   offerType?: string;
   displayPages?: number[];
+  questionIds?: string[]; // Specific questions after which offer should appear
   scriptContent?: string | null; // For popup_script offers
   linkText?: string | null; // For next_link offers  
   impressionPixel?: string | null; // For tune_standard tracking
