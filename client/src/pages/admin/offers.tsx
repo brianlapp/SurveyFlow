@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { OfferCard } from "@/components/admin/offer-card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -12,7 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertOfferSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, Filter } from "lucide-react";
+import { Plus, Upload, Filter, Edit, Pause, Play, Trash2, ExternalLink, Code, Eye } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { z } from "zod";
@@ -79,6 +80,46 @@ export default function Offers() {
       toast({
         title: "Success",
         description: "Offer updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleOfferMutation = useMutation({
+    mutationFn: async ({ id, isPaused }: { id: string; isPaused: boolean }) => {
+      await apiRequest('PUT', `/api/offers/${id}`, { isPaused });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
+      toast({
+        title: "Success",
+        description: "Offer status updated",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteOfferMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/offers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/offers'] });
+      toast({
+        title: "Success",
+        description: "Offer deleted successfully",
       });
     },
     onError: (error) => {
@@ -361,28 +402,159 @@ export default function Offers() {
         </CardContent>
       </Card>
 
-      {/* Offers Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOffers.map((offer: any) => (
-            <OfferCard key={offer.id} offer={offer} onEdit={handleEdit} />
-          ))}
-          
-          {filteredOffers.length === 0 && (
-            <div className="col-span-full text-center py-12">
+      {/* Offers Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 bg-muted animate-pulse rounded mb-2" />
+              ))}
+            </div>
+          ) : filteredOffers.length === 0 ? (
+            <div className="text-center py-12">
               <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-lg text-muted-foreground">No offers found</p>
               <p className="text-sm text-muted-foreground">Try adjusting your filters</p>
             </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Offer</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Payout</TableHead>
+                  <TableHead>Conv. Rate</TableHead>
+                  <TableHead>Revenue</TableHead>
+                  <TableHead>Convs</TableHead>
+                  <TableHead>Targeting</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOffers.map((offer: any) => {
+                  const getOfferTypeInfo = () => {
+                    switch (offer.offerType) {
+                      case 'tune_standard':
+                        return { icon: ExternalLink, label: 'Tune', color: 'text-blue-600' };
+                      case 'popup_script':
+                        return { icon: Code, label: 'Popup', color: 'text-purple-600' };
+                      case 'next_link':
+                        return { icon: Eye, label: 'Link', color: 'text-green-600' };
+                      default:
+                        return { icon: Eye, label: 'Unknown', color: 'text-gray-600' };
+                    }
+                  };
+                  
+                  const typeInfo = getOfferTypeInfo();
+                  const TypeIcon = typeInfo.icon;
+                  
+                  return (
+                    <TableRow key={offer.id} data-testid={`offer-row-${offer.id}`}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium" data-testid="offer-name">{offer.name}</div>
+                          <div className="text-sm text-muted-foreground">{offer.category}</div>
+                          {offer.tuneOfferId && (
+                            <div className="text-xs text-muted-foreground">#{offer.tuneOfferId}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <TypeIcon className={`h-4 w-4 ${typeInfo.color}`} />
+                          <span className="text-sm">{typeInfo.label}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-green-600" data-testid="offer-payout">
+                          ${offer.payout}
+                        </div>
+                      </TableCell>
+                      <TableCell data-testid="offer-conversion-rate">
+                        {offer.conversionRate || '0.00'}%
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-green-600" data-testid="offer-total-revenue">
+                          ${offer.totalRevenue || '0.00'}
+                        </div>
+                      </TableCell>
+                      <TableCell data-testid="offer-conversions">
+                        {offer.totalConversions || 0}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {offer.displayPages && offer.displayPages.length > 0 && (
+                            <div className="flex items-center gap-1 text-xs">
+                              <Badge variant="secondary" className="text-xs px-1.5 py-0">Pages</Badge>
+                              <span className="text-muted-foreground">
+                                {offer.displayPages.length}
+                              </span>
+                            </div>
+                          )}
+                          {offer.questionIds && offer.questionIds.length > 0 && (
+                            <div className="flex items-center gap-1 text-xs">
+                              <Badge variant="secondary" className="text-xs px-1.5 py-0">Questions</Badge>
+                              <span className="text-muted-foreground">
+                                {offer.questionIds.length}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {!offer.isActive ? (
+                          <Badge variant="destructive" className="status-inactive">Inactive</Badge>
+                        ) : offer.isPaused ? (
+                          <Badge variant="secondary" className="status-paused">Paused</Badge>
+                        ) : (
+                          <Badge variant="default" className="status-active">Active</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit(offer)}
+                            data-testid="button-edit-offer"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => toggleOfferMutation.mutate({ id: offer.id, isPaused: !offer.isPaused })}
+                            disabled={toggleOfferMutation.isPending}
+                            data-testid="button-toggle-offer"
+                          >
+                            {offer.isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this offer?')) {
+                                deleteOfferMutation.mutate(offer.id);
+                              }
+                            }}
+                            disabled={deleteOfferMutation.isPending}
+                            data-testid="button-delete-offer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Create Offer Modal */}
       <Dialog open={showCreateModal} onOpenChange={handleModalChange}>
@@ -704,6 +876,58 @@ export default function Offers() {
           <DialogHeader>
             <DialogTitle>Edit Offer</DialogTitle>
           </DialogHeader>
+          
+          {/* Offer Preview */}
+          {editingOffer && (
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                {editingOffer.offerType === 'tune_standard' && <ExternalLink className="h-4 w-4 text-blue-600" />}
+                {editingOffer.offerType === 'popup_script' && <Code className="h-4 w-4 text-purple-600" />}
+                {editingOffer.offerType === 'next_link' && <Eye className="h-4 w-4 text-green-600" />}
+                <span className="text-sm font-medium">Offer Preview</span>
+              </div>
+              
+              {editingOffer.offerType === 'tune_standard' && (
+                <div className="relative aspect-video bg-white dark:bg-gray-800 rounded overflow-hidden border">
+                  {editingOffer.imageUrl ? (
+                    <img 
+                      src={editingOffer.imageUrl} 
+                      alt={editingOffer.name}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect fill="%23f0f0f0" width="200" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Image</text></svg>';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                      No image URL set
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {editingOffer.offerType === 'popup_script' && (
+                <div className="relative aspect-video bg-white dark:bg-gray-800 rounded border flex items-center justify-center p-3">
+                  <div className="text-xs font-mono text-muted-foreground text-center line-clamp-3">
+                    {editingOffer.scriptContent ? (
+                      editingOffer.scriptContent.substring(0, 120)
+                    ) : (
+                      'No script content'
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {editingOffer.offerType === 'next_link' && (
+                <div className="relative aspect-video bg-white dark:bg-gray-800 rounded border flex items-center justify-center">
+                  <div className="bg-teal-600 text-white px-6 py-2 rounded-md font-medium text-sm">
+                    {editingOffer.linkText || 'Next'}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
               {/* Use editingOffer for conditional rendering in edit mode */}
