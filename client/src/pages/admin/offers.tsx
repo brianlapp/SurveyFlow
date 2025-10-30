@@ -603,27 +603,40 @@ export default function Offers() {
               )}
               
               <div>
-                <FormLabel>Display Pages</FormLabel>
-                <p className="text-sm text-muted-foreground mb-2">Page-based targeting (5=Registration, 10=Survey, 15=Main Offers, 20=Exit)</p>
-                <div className="grid grid-cols-6 gap-2 mt-2">
-                  {[5, 10, 15, 20, 25, 30].map((page) => (
-                    <label key={page} className="flex items-center">
+                <FormLabel>Page Display (One-Time Pages)</FormLabel>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Select where to show this offer. These are single pages, NOT survey questions.
+                </p>
+                <div className="space-y-2 mt-3">
+                  {[
+                    { value: 5, label: 'Registration Page', desc: 'Shows once during registration' },
+                    { value: 15, label: 'Main Offers Page', desc: 'Shows once after all survey questions' },
+                    { value: 20, label: 'Exit Lottery Page', desc: 'Shows once at the very end' }
+                  ].map((page) => (
+                    <label key={page.value} className="flex items-start gap-2 cursor-pointer">
                       <Checkbox
-                        checked={form.watch('displayPages')?.includes(page)}
+                        checked={form.watch('displayPages')?.includes(page.value)}
                         onCheckedChange={(checked) => {
                           const current = form.getValues('displayPages') || [];
                           if (checked) {
-                            form.setValue('displayPages', [...current, page]);
+                            form.setValue('displayPages', [...current, page.value]);
                           } else {
-                            form.setValue('displayPages', current.filter(p => p !== page));
+                            form.setValue('displayPages', current.filter(p => p !== page.value));
                           }
                         }}
-                        data-testid={`checkbox-page-${page}`}
+                        data-testid={`checkbox-page-${page.value}`}
+                        className="mt-1"
                       />
-                      <span className="ml-1">{page}</span>
+                      <div>
+                        <div className="font-medium">{page.label}</div>
+                        <div className="text-xs text-muted-foreground">{page.desc}</div>
+                      </div>
                     </label>
                   ))}
                 </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded">
+                  ⚠️ For survey questions, use "Question Display" section below - NOT this section
+                </p>
               </div>
 
               <div>
@@ -870,27 +883,40 @@ export default function Offers() {
                 name="displayPages"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Display Pages</FormLabel>
-                    <p className="text-sm text-muted-foreground mb-2">Page-based targeting (5=Registration, 10=Survey, 15=Main Offers, 20=Exit)</p>
-                    <div className="grid grid-cols-6 gap-2 mt-2">
-                      {[5, 10, 15, 20, 25, 30].map((page) => (
-                        <label key={page} className="flex items-center">
+                    <FormLabel>Page Display (One-Time Pages)</FormLabel>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Select where to show this offer. These are single pages, NOT survey questions.
+                    </p>
+                    <div className="space-y-2 mt-3">
+                      {[
+                        { value: 5, label: 'Registration Page', desc: 'Shows once during registration' },
+                        { value: 15, label: 'Main Offers Page', desc: 'Shows once after all survey questions' },
+                        { value: 20, label: 'Exit Lottery Page', desc: 'Shows once at the very end' }
+                      ].map((page) => (
+                        <label key={page.value} className="flex items-start gap-2 cursor-pointer">
                           <Checkbox
-                            checked={(field.value || []).includes(page)}
+                            checked={(field.value || []).includes(page.value)}
                             onCheckedChange={(checked) => {
                               const current = field.value || [];
                               if (checked) {
-                                field.onChange([...current, page]);
+                                field.onChange([...current, page.value]);
                               } else {
                                 field.onChange(current.filter((p: number) => p !== page));
                               }
                             }}
-                            data-testid={`checkbox-page-${page}`}
+                            data-testid={`checkbox-page-${page.value}`}
+                            className="mt-1"
                           />
-                          <span className="ml-1">{page}</span>
+                          <div>
+                            <div className="font-medium">{page.label}</div>
+                            <div className="text-xs text-muted-foreground">{page.desc}</div>
+                          </div>
                         </label>
                       ))}
                     </div>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded">
+                      ⚠️ For survey questions, use "Question Display" section below - NOT this section
+                    </p>
                   </FormItem>
                 )}
               />
