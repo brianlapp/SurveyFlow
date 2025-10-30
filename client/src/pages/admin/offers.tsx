@@ -610,7 +610,7 @@ export default function Offers() {
               )}
               
               <div>
-                <FormLabel>Page Display (One-Time Pages)</FormLabel>
+                <FormLabel>Display on Pages (Non Survey Questions)</FormLabel>
                 <p className="text-sm text-muted-foreground mb-2">
                   Select where to show this offer. These are single pages, NOT survey questions.
                 </p>
@@ -897,7 +897,7 @@ export default function Offers() {
                 name="displayPages"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Page Display (One-Time Pages)</FormLabel>
+                    <FormLabel>Display on Pages (Non Survey Questions)</FormLabel>
                     <p className="text-sm text-muted-foreground mb-2">
                       Select where to show this offer. These are single pages, NOT survey questions.
                     </p>
