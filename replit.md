@@ -5,7 +5,8 @@ A multi-brand co-registration platform designed to transform user engagement int
 # Recent Changes
 
 ## Latest Updates (October 30, 2025)
-- **Enhanced Offers Card Layout**: Redesigned offers page with visual preview boxes showing what each offer looks like. Each card displays a preview (images for tune_standard, code snippets for popup_script, buttons for next_link), stats in a 2x2 grid (conversion rate, revenue, conversions, position), and clear targeting information with badges distinguishing page-based vs question-based targeting. All preview boxes use consistent aspect-video containers for uniform card heights and better grid alignment.
+- **Affiliate Dashboard Table Layout**: Redesigned offers page from card grid to affiliate dashboard-style table for easy comparison of 20+ offers. Table displays columns: Offer name, Type badge, Payout ($), Conversion rate (%), Total revenue ($), Conversions (#), Targeting (pages/questions badges), Status badge, Actions (Edit/Pause/Delete buttons). Visual preview now only appears in edit modal showing offer appearance based on type.
+- **Edit Modal Visual Preview**: Added preview section to edit modal displaying what each offer looks like (images for tune_standard, code snippets for popup_script, buttons for next_link) using consistent aspect-video containers. Preview automatically shows based on current offer data.
 - **Improved Offer Form Labels**: Updated targeting section labels to "Display on Pages (Non Survey Questions)" and "Display on Questions" for clearer distinction between one-time page-based targeting and question-specific targeting.
 - **Form Bug Fixes**: Fixed checkbox unchecking bug in page display selector (was comparing number to object), and fixed description field to properly save empty/null values with clear "(Optional)" labeling.
 
