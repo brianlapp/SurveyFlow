@@ -474,10 +474,17 @@ export default function Offers() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Offer description..." {...field} value={field.value || ''} data-testid="textarea-description" />
+                      <Textarea 
+                        placeholder="Enter offer description (optional)..." 
+                        {...field} 
+                        value={field.value ?? ''} 
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                        data-testid="textarea-description" 
+                      />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">Leave blank if you don't need a description</p>
                   </FormItem>
                 )}
               />
@@ -766,10 +773,17 @@ export default function Offers() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Enter offer description..." {...field} value={field.value || ''} data-testid="textarea-description" />
+                      <Textarea 
+                        placeholder="Enter offer description (optional)..." 
+                        {...field} 
+                        value={field.value ?? ''} 
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                        data-testid="textarea-description" 
+                      />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">Leave blank if you don't need a description</p>
                   </FormItem>
                 )}
               />
@@ -901,7 +915,7 @@ export default function Offers() {
                               if (checked) {
                                 field.onChange([...current, page.value]);
                               } else {
-                                field.onChange(current.filter((p: number) => p !== page));
+                                field.onChange(current.filter((p: number) => p !== page.value));
                               }
                             }}
                             data-testid={`checkbox-page-${page.value}`}
