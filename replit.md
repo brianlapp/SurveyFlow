@@ -4,9 +4,9 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (October 30, 2025)
-- **Affiliate Dashboard Table Layout**: Redesigned offers page from card grid to affiliate dashboard-style table for easy comparison of 20+ offers. Table displays columns: Offer name, Type badge, Payout ($), Conversion rate (%), Total revenue ($), Conversions (#), Targeting (pages/questions badges), Status badge, Actions (Edit/Pause/Delete buttons). Visual preview now only appears in edit modal showing offer appearance based on type.
-- **Edit Modal Visual Preview**: Added preview section to edit modal displaying what each offer looks like (images for tune_standard, code snippets for popup_script, buttons for next_link) using consistent aspect-video containers. Preview automatically shows based on current offer data.
+## Latest Updates (November 3, 2025)
+- **Affiliate Dashboard Table Layout**: Redesigned offers page from card grid to affiliate dashboard-style table for easy comparison of 20+ offers. Table displays columns: Offer Name, Type badge, Payout ($), Conversion rate (%), Total revenue ($), Conversions (#), Targeting (pages/questions badges), Status badge, Actions (Edit/Pause/Delete buttons). Column header clearly labeled "Offer Name" for easy identification.
+- **Responsive Edit Modal Layout**: Restructured edit modal with side-by-side layout on desktop (form details on left 2/3 width, live preview on right 1/3 width) and stacked layout on mobile (preview below details). Preview section uses sticky positioning and displays offer appearance based on type (images for tune_standard, code snippets for popup_script, buttons for next_link) with consistent aspect-video containers.
 - **Improved Offer Form Labels**: Updated targeting section labels to "Display on Pages (Non Survey Questions)" and "Display on Questions" for clearer distinction between one-time page-based targeting and question-specific targeting.
 - **Form Bug Fixes**: Fixed checkbox unchecking bug in page display selector (was comparing number to object), and fixed description field to properly save empty/null values with clear "(Optional)" labeling.
 
