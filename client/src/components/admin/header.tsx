@@ -1,7 +1,13 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Bell, Moon, Sun } from "lucide-react";
+import { Search, Bell, Moon, Sun, HelpCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface HeaderProps {
   title: string;
@@ -35,6 +41,19 @@ export default function Header({ title, subtitle }: HeaderProps) {
           />
           <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
         </div>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link href="/admin/docs">
+              <Button variant="ghost" size="sm" data-testid="button-help">
+                <HelpCircle className="h-4 w-4" />
+              </Button>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Documentation</p>
+          </TooltipContent>
+        </Tooltip>
         
         <Button variant="ghost" size="sm" data-testid="button-notifications">
           <Bell className="h-4 w-4" />

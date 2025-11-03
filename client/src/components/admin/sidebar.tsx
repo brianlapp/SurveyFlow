@@ -11,7 +11,8 @@ import {
   Building,
   Settings,
   LogOut,
-  User
+  User,
+  BookOpen
 } from "lucide-react";
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { name: "Brands", href: "/admin/brands", icon: Building },
+  { name: "Documentation", href: "/admin/docs", icon: BookOpen },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
