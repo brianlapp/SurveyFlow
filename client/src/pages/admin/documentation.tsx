@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,14 @@ interface DocSection {
 
 export default function Documentation() {
   const [activeSection, setActiveSection] = useState("overview");
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Scroll content to top whenever section changes
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [activeSection]);
 
   const sections: DocSection[] = [
     {
@@ -440,9 +448,12 @@ export default function Documentation() {
           {/* Content Area */}
           <Card className="lg:col-span-3">
             <CardContent className="p-6">
-              <ScrollArea className="h-[calc(100vh-150px)] pr-4">
+              <div 
+                ref={contentRef}
+                className="h-[calc(100vh-150px)] overflow-y-auto pr-4 scroll-smooth"
+              >
                 {activeContent}
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </div>
