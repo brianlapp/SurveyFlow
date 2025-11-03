@@ -421,7 +421,7 @@ export default function Offers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Offer</TableHead>
+                  <TableHead>Offer Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Payout</TableHead>
                   <TableHead>Conv. Rate</TableHead>
@@ -872,64 +872,17 @@ export default function Offers() {
 
       {/* Edit Offer Modal */}
       <Dialog open={showEditModal} onOpenChange={handleEditModalClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="modal-edit-offer">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" data-testid="modal-edit-offer">
           <DialogHeader>
             <DialogTitle>Edit Offer</DialogTitle>
           </DialogHeader>
           
-          {/* Offer Preview */}
-          {editingOffer && (
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                {editingOffer.offerType === 'tune_standard' && <ExternalLink className="h-4 w-4 text-blue-600" />}
-                {editingOffer.offerType === 'popup_script' && <Code className="h-4 w-4 text-purple-600" />}
-                {editingOffer.offerType === 'next_link' && <Eye className="h-4 w-4 text-green-600" />}
-                <span className="text-sm font-medium">Offer Preview</span>
-              </div>
-              
-              {editingOffer.offerType === 'tune_standard' && (
-                <div className="relative aspect-video bg-white dark:bg-gray-800 rounded overflow-hidden border">
-                  {editingOffer.imageUrl ? (
-                    <img 
-                      src={editingOffer.imageUrl} 
-                      alt={editingOffer.name}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect fill="%23f0f0f0" width="200" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Image</text></svg>';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                      No image URL set
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {editingOffer.offerType === 'popup_script' && (
-                <div className="relative aspect-video bg-white dark:bg-gray-800 rounded border flex items-center justify-center p-3">
-                  <div className="text-xs font-mono text-muted-foreground text-center line-clamp-3">
-                    {editingOffer.scriptContent ? (
-                      editingOffer.scriptContent.substring(0, 120)
-                    ) : (
-                      'No script content'
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {editingOffer.offerType === 'next_link' && (
-                <div className="relative aspect-video bg-white dark:bg-gray-800 rounded border flex items-center justify-center">
-                  <div className="bg-teal-600 text-white px-6 py-2 rounded-md font-medium text-sm">
-                    {editingOffer.linkText || 'Next'}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onEditSubmit)}>
+              {/* Desktop: side-by-side, Mobile: stacked with preview below */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left side: Form details (2/3 width on desktop) */}
+                <div className="lg:col-span-2 space-y-4">
               {/* Use editingOffer for conditional rendering in edit mode */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -1194,6 +1147,61 @@ export default function Offers() {
                   </FormItem>
                 )}
               />
+                </div>
+                
+                {/* Right side: Preview (1/3 width on desktop, below details on mobile) */}
+                {editingOffer && (
+                  <div className="lg:col-span-1">
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 sticky top-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        {editingOffer.offerType === 'tune_standard' && <ExternalLink className="h-4 w-4 text-blue-600" />}
+                        {editingOffer.offerType === 'popup_script' && <Code className="h-4 w-4 text-purple-600" />}
+                        {editingOffer.offerType === 'next_link' && <Eye className="h-4 w-4 text-green-600" />}
+                        <span className="text-sm font-medium">Preview</span>
+                      </div>
+                      
+                      {editingOffer.offerType === 'tune_standard' && (
+                        <div className="relative aspect-video bg-white dark:bg-gray-800 rounded overflow-hidden border">
+                          {editingOffer.imageUrl ? (
+                            <img 
+                              src={editingOffer.imageUrl} 
+                              alt={editingOffer.name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect fill="%23f0f0f0" width="200" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Image</text></svg>';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                              No image URL set
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {editingOffer.offerType === 'popup_script' && (
+                        <div className="relative aspect-video bg-white dark:bg-gray-800 rounded border flex items-center justify-center p-3">
+                          <div className="text-xs font-mono text-muted-foreground text-center line-clamp-3">
+                            {editingOffer.scriptContent ? (
+                              editingOffer.scriptContent.substring(0, 120)
+                            ) : (
+                              'No script content'
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {editingOffer.offerType === 'next_link' && (
+                        <div className="relative aspect-video bg-white dark:bg-gray-800 rounded border flex items-center justify-center">
+                          <div className="bg-teal-600 text-white px-6 py-2 rounded-md font-medium text-sm">
+                            {editingOffer.linkText || 'Next'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <div className="flex justify-end space-x-3 mt-6">
                 <Button
