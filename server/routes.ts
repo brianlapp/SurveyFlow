@@ -589,6 +589,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let offerData = insertOfferSchema.parse(req.body);
       
+      // Convert empty tuneOfferId to null to avoid unique constraint issues
+      if (offerData.tuneOfferId === '' || offerData.tuneOfferId === undefined) {
+        offerData.tuneOfferId = null;
+      }
+      
       // If Tune offer ID provided, try to fetch details from Tune API
       if (offerData.tuneOfferId) {
         try {
@@ -622,7 +627,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/offers/:id', isAuthenticated, async (req, res) => {
     try {
-      const offer = await storage.updateOffer(req.params.id, req.body);
+      const updateData = { ...req.body };
+      
+      // Convert empty tuneOfferId to null to avoid unique constraint issues
+      if (updateData.tuneOfferId === '' || updateData.tuneOfferId === undefined) {
+        updateData.tuneOfferId = null;
+      }
+      
+      const offer = await storage.updateOffer(req.params.id, updateData);
       res.json(offer);
     } catch (error) {
       console.error("Error updating offer:", error);
