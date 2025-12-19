@@ -34,6 +34,12 @@ function Router() {
     );
   }
 
+  // Redirect to login if trying to access admin routes while not authenticated
+  if (!isAuthenticated && window.location.pathname.startsWith('/admin')) {
+    window.location.href = "/api/login";
+    return null;
+  }
+
   return (
     <Switch>
       {/* Public routes */}
@@ -41,17 +47,6 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/survey/:sessionId?" component={Survey} />
       <Route path="/exit/:sessionId?" component={ExitLottery} />
-      
-      {/* Admin routes - redirect to login if not authenticated */}
-      <Route path="/admin/:rest*">
-        {() => {
-          if (!isAuthenticated) {
-            window.location.href = "/api/login";
-            return null;
-          }
-          return null;
-        }}
-      </Route>
       
       {/* Authenticated admin routes */}
       {isAuthenticated && (
