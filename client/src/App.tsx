@@ -42,8 +42,19 @@ function Router() {
       <Route path="/survey/:sessionId?" component={Survey} />
       <Route path="/exit/:sessionId?" component={ExitLottery} />
       
-      {/* Admin routes */}
-      {isAuthenticated ? (
+      {/* Admin routes - redirect to login if not authenticated */}
+      <Route path="/admin/:rest*">
+        {() => {
+          if (!isAuthenticated) {
+            window.location.href = "/api/login";
+            return null;
+          }
+          return null;
+        }}
+      </Route>
+      
+      {/* Authenticated admin routes */}
+      {isAuthenticated && (
         <AdminLayout>
           <Switch>
             <Route path="/" component={Dashboard} />
@@ -61,9 +72,10 @@ function Router() {
             <Route component={NotFound} />
           </Switch>
         </AdminLayout>
-      ) : (
-        <Route path="/" component={Landing} />
       )}
+      
+      {/* Public landing page */}
+      {!isAuthenticated && <Route path="/" component={Landing} />}
       
       <Route component={NotFound} />
     </Switch>
