@@ -22,6 +22,7 @@ import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
 import ExitLottery from "@/pages/user/exit-lottery";
+import PublicPreview from "@/pages/public-preview";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/survey/:sessionId?" component={Survey} />
       <Route path="/exit/:sessionId?" component={ExitLottery} />
+      <Route path="/preview" component={PublicPreview} />
       
       {/* Authenticated admin routes */}
       {isAuthenticated && (
