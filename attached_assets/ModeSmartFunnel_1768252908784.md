@@ -1,0 +1,469 @@
+# ModeSmartFunnel \- Project Spec
+
+## Executive Summary
+
+A modern multi-brand co-registration platform that transforms user engagement into revenue through intelligent survey flows and offer optimization.
+
+**Goal:** Generate $3+ revenue per user through strategic offer placement and smart question sequencing.
+
+**Brands:**
+
+- **ModeFreeFinds.com** \- Consumer goods, samples, deals  
+- **ModeMarketMunchies.com** \- Finance, investing, market insights
+
+---
+
+##  Business Case
+
+### Revenue Model
+
+- **Co-Reg Offers:** $0.10–$0.50 each (target 5-6 acceptances per user)  
+- **Display Ads:** $0.25–$0.50 per click (target 3-5 clicks per user)  
+- **Target:** $3.00+ revenue per completed user
+
+### Expected Returns at Scale
+
+- **Monthly Users:** 500,000  
+- **Profit per User:** $0.50 (after $3.00 revenue threshold)  
+- **Monthly Profit:** $250,000  
+- **Infrastructure Cost:** $250/month  
+- **ROI:** 1000x on infrastructure investment
+
+### 
+
+### The Secret Sauce: Smart Postback System
+
+```
+User generates revenue → Track cumulative total
+                      ↓
+              Reach $3.00 threshold
+                      ↓
+            THEN fire affiliate postback
+```
+
+---
+
+## 
+
+##  Complete Features List
+
+### Phase 1: Core Platform Features
+
+#### 1\. User Flow Management
+
+- **Registration Form**  
+    
+  - Capture: name, email, age, gender, address, phone (optional)  
+  - Source/sub-source tracking via URL parameters  
+  - Session creation with unique ID  
+  - Browser fingerprinting for fraud prevention
+
+
+- **Survey Progression**  
+    
+  - 30-page flow with progress indicator  
+  - Back button functionality with state preservation  
+  - Auto-save every 3 questions  
+  - Resume capability if user drops off  
+  - Mobile swipe navigation support
+
+
+- **Question Management**  
+    
+  - Add/Edit/Delete questions via admin panel  
+  - Drag-and-drop to reorder questions  
+  - Set conditional logic rules (if answer \= X, show question Y)  
+  - Category tagging (health, finance, shopping, etc.)  
+  - Mark questions as required/optional  
+  - Preview mode before publishing
+
+#### 2\. Offer Management System
+
+- **Offer CRUD Operations**  
+    
+  - Add offer by Tune ID (auto-pulls details via API)  
+  - Edit offer details (name, description, image)  
+  - Delete/Archive offers  
+  - Bulk import via CSV  
+  - Clone existing offers for variations
+
+
+- **Offer Configuration**  
+    
+  - Set payout amount per conversion  
+  - Define target demographics (age, gender, location)  
+  - Choose display pages (e.g., pages 5, 10, 15, 20\)  
+  - Set position on page (1st, 2nd, 3rd)  
+  - Schedule offers (start date, end date)  
+  - Set daily/weekly/monthly caps
+
+
+- **Offer Display Rules**  
+    
+  - Show based on user answers  
+  - Geo-targeting (state/country level)  
+  - Device targeting (mobile/desktop)  
+  - Time-based display (day parting)  
+  - Frequency capping per user
+
+#### 3\. Revenue Tracking Dashboard
+
+- **Real-Time Metrics**  
+    
+  - Live user count on site  
+  - Today's revenue counter  
+  - Current conversion rate  
+  - Active offers performance
+
+
+- **Historical Analytics**  
+    
+  - Daily/Weekly/Monthly revenue charts  
+  - User completion funnel visualization  
+  - Source performance comparison  
+  - Offer performance heatmap  
+  - Question drop-off analysis
+
+
+- **Export Capabilities**  
+    
+  - Download raw data as CSV  
+  - Scheduled email reports (daily/weekly)  
+  - Custom date range exports  
+  - Filtered exports by source/offer/demographic
+
+#### 4\. Admin Panel Features
+
+- **Dashboard Home**  
+    
+  - Key metrics summary cards  
+  - Revenue trend graph  
+  - Top performing offers  
+  - Recent user completions  
+  - System health indicators
+
+
+- **User Management**  
+    
+  - View individual user journeys  
+  - Search users by email/ID  
+  - See user answers and offers clicked  
+  - Manual postback triggering  
+  - Block/flag suspicious users
+
+
+- **Settings Management**  
+    
+  - Configure revenue thresholds by source  
+  - Set global conversion caps  
+  - Manage API keys (Tune, OpenAI)  
+  - Configure email notifications  
+  - Timezone settings
+
+### Phase 2: Intelligence Features
+
+#### 5\. AI Question Generation
+
+- **Automated Generation**  
+    
+  - Daily batch generation of 50-100 questions  
+  - Based on previous day's performance  
+  - Demographic-specific variations  
+  - Seasonal/trending topic inclusion
+
+
+- **Performance Optimization**  
+    
+  - Auto-retire questions below 2% conversion  
+  - Promote high-performing questions  
+  - A/B test question variations  
+  - Track question-to-offer conversion paths
+
+
+- **Manual Override**  
+    
+  - Review AI-generated questions before publishing  
+  - Edit AI suggestions  
+  - Blacklist certain topics/words  
+  - Force include specific questions
+
+#### 6\. Advanced Analytics Suite
+
+- **Cohort Analysis**  
+    
+  - Track user groups over time  
+  - Compare source quality  
+  - Lifetime value calculations  
+  - Retention metrics
+
+
+- **Attribution Modeling**  
+    
+  - Multi-touch attribution  
+  - Question influence on conversions  
+  - Offer interaction analysis  
+  - Revenue attribution by touchpoint
+
+
+- **Predictive Analytics**  
+    
+  - User value prediction  
+  - Completion probability scoring  
+  - Optimal offer recommendation  
+  - Churn prediction
+
+#### 7\. A/B Testing Framework
+
+- **Test Configuration**  
+    
+  - Create test variants (questions, offers, flows)  
+  - Set traffic split percentages  
+  - Define success metrics  
+  - Set statistical significance thresholds
+
+
+- **Test Management**  
+    
+  - Pause/resume tests  
+  - Early winner detection  
+  - Automatic winner deployment  
+  - Test result archives
+
+#### 8\. Automation Features
+
+- **Smart Offer Rotation**  
+    
+  - Auto-optimize offer positions  
+  - Pause underperforming offers  
+  - Scale winning combinations  
+  - Dayparting optimization
+
+
+- **Dynamic Thresholds**  
+    
+  - Adjust postback thresholds based on source quality  
+  - Seasonal adjustments  
+  - Real-time ROI optimization
+
+---
+
+##  Technical Implementation Details
+
+### User Interface Flows
+
+#### Admin Dashboard Layout
+
+```
+┌─────────────────────────────────────────┐
+│  Header: Logo | User | Settings | Logout │
+├─────────────────────────────────────────┤
+│ Sidebar │        Main Content Area       │
+│         │                                 │
+│ ▼ Dashboard                              │
+│ ▼ Users    ┌──────────────────────────┐ │
+│ ▼ Offers   │   Revenue: $4,250         │ │
+│ ▼ Questions│   Users: 1,417            │ │
+│ ▼ Analytics│   Avg Rev: $3.00          │ │
+│ ▼ Settings └──────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+#### Offer Management Interface
+
+```
+┌─────────────────────────────────────────┐
+│  Offers Management                       │
+├─────────────────────────────────────────┤
+│ [+ Add Offer] [Import CSV] [Export]     │
+│                                          │
+│ Active Offers (8)                       │
+│ ┌────────────────────────────────────┐  │
+│ │ ✓ Insurance Quote - $2.50          │  │
+│ │   Pages: 5,10,15 | Conv: 4.2%      │  │
+│ │   [Edit] [Stats] [Pause] [Delete]  │  │
+│ └────────────────────────────────────┘  │
+│ ┌────────────────────────────────────┐  │
+│ │ ✓ Credit Card Offer - $4.00        │  │
+│ │   Pages: 8,12 | Conv: 2.1%         │  │
+│ │   [Edit] [Stats] [Pause] [Delete]  │  │
+│ └────────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+### API Endpoints (Complete List)
+
+#### User Flow APIs
+
+```
+POST   /api/user/register          - Initial registration
+GET    /api/user/session           - Get current session
+POST   /api/user/response          - Submit answer
+POST   /api/user/complete          - Mark flow complete
+GET    /api/user/{id}/journey      - Admin: View user path
+DELETE /api/user/{id}              - Admin: Delete user
+```
+
+#### Offer Management APIs
+
+```
+GET    /api/offers                 - List all offers
+POST   /api/offers                 - Create new offer
+PUT    /api/offers/{id}           - Update offer
+DELETE /api/offers/{id}           - Delete offer
+POST   /api/offers/import          - Bulk import
+GET    /api/offers/{id}/stats      - Get offer statistics
+POST   /api/offers/{id}/pause      - Pause offer
+POST   /api/offers/{id}/resume     - Resume offer
+```
+
+#### Question Management APIs
+
+```
+GET    /api/questions              - List all questions
+POST   /api/questions              - Add question
+PUT    /api/questions/{id}        - Update question
+DELETE /api/questions/{id}        - Delete question
+POST   /api/questions/reorder      - Reorder questions
+POST   /api/questions/generate     - Trigger AI generation
+GET    /api/questions/{id}/stats   - Question performance
+```
+
+#### Analytics APIs
+
+```
+GET    /api/analytics/dashboard    - Main dashboard data
+GET    /api/analytics/revenue      - Revenue metrics
+GET    /api/analytics/users        - User metrics
+GET    /api/analytics/offers       - Offer performance
+GET    /api/analytics/questions    - Question performance
+GET    /api/analytics/sources      - Source attribution
+POST   /api/analytics/export       - Export data
+```
+
+#### Admin APIs
+
+```
+GET    /api/admin/settings         - Get all settings
+PUT    /api/admin/settings         - Update settings
+GET    /api/admin/logs             - System logs
+POST   /api/admin/postback/manual  - Manual postback trigger
+GET    /api/admin/health           - System health check
+```
+
+### Database Schema (Extended)
+
+```sql
+-- Offer management
+CREATE TABLE offers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tune_offer_id VARCHAR(100) UNIQUE,
+  name VARCHAR(255),
+  description TEXT,
+  image_url VARCHAR(500),
+  payout DECIMAL(10,2),
+  category VARCHAR(100),
+  pages INTEGER[],
+  position INTEGER,
+  requirements JSONB,
+  daily_cap INTEGER,
+  total_cap INTEGER,
+  is_active BOOLEAN DEFAULT true,
+  is_paused BOOLEAN DEFAULT false,
+  start_date DATE,
+  end_date DATE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Offer statistics
+CREATE TABLE offer_stats (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  offer_id UUID REFERENCES offers(id),
+  date DATE,
+  impressions INTEGER DEFAULT 0,
+  clicks INTEGER DEFAULT 0,
+  conversions INTEGER DEFAULT 0,
+  revenue DECIMAL(10,2) DEFAULT 0,
+  ctr DECIMAL(5,2),
+  conversion_rate DECIMAL(5,2),
+  epc DECIMAL(10,2)
+);
+
+-- A/B tests
+CREATE TABLE ab_tests (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255),
+  type VARCHAR(50), -- 'question', 'offer', 'flow'
+  variants JSONB,
+  traffic_split JSONB,
+  success_metric VARCHAR(100),
+  status VARCHAR(50), -- 'active', 'paused', 'completed'
+  winner_variant VARCHAR(100),
+  started_at TIMESTAMP,
+  ended_at TIMESTAMP
+);
+
+-- User sessions
+CREATE TABLE user_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  session_token VARCHAR(255) UNIQUE,
+  ip_address INET,
+  user_agent TEXT,
+  started_at TIMESTAMP DEFAULT NOW(),
+  last_activity TIMESTAMP DEFAULT NOW(),
+  completed BOOLEAN DEFAULT false
+);
+```
+
+---
+
+##  Implementation Timeline
+
+### Phase 1: Core Platform (4-6 weeks)
+
+- [ ] Week 1: Database setup, user registration, session management  
+- [ ] Week 2: Survey flow, question management, conditional logic  
+- [ ] Week 3: Tune API integration, offer management CRUD  
+- [ ] Week 4: Revenue tracking, postback system  
+- [ ] Week 5: Admin dashboard, analytics, exports  
+- [ ] Week 6: Testing, bug fixes, deployment
+
+### Phase 2: Intelligence Layer (4-6 weeks)
+
+- [ ] Week 1: AI question generation setup  
+- [ ] Week 2: Performance tracking, auto-optimization  
+- [ ] Week 3: Advanced analytics, cohort analysis  
+- [ ] Week 4: A/B testing framework  
+- [ ] Week 5: Automation features, smart rotation  
+- [ ] Week 6: Final testing, optimization
+
+*Note: Timeline based on 10 hours/week development capacity*
+
+---
+
+##  Investment Summary
+
+### Development Investment
+
+- **Phase 1 (Core Platform):** Foundation and MVP  
+- **Phase 2 (Intelligence):** AI and optimization  
+- **Total Timeline:** 8-12 weeks at 10 hours/week
+
+### Operational Costs
+
+- **Monthly Infrastructure:** \~$200  
+- **Scales to:** 500,000+ users/month  
+- **Break-even:** \~400 users/month  
+- **Profit at scale:** $250,000/month
+
+### Return on Investment
+
+- **Infrastructure ROI:** 1250x  
+- **Payback period:** \< 1 day at scale  
+- **Profit margin:** 99%+ after infrastructure costs
+
+---
+
+##  
+
