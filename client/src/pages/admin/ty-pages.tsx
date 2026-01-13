@@ -47,6 +47,7 @@ interface TyPage {
   affiliateId: string;
   trackingDomain: string;
   buttonText: string;
+  fbShareUrl: string | null;
   isActive: boolean;
   impressions: number;
   clicks: number;
@@ -71,6 +72,7 @@ export default function TyPages() {
     affiliateId: "",
     trackingDomain: "track.modemobile.com",
     buttonText: "CONTINUE",
+    fbShareUrl: "",
     isActive: true,
   });
 
@@ -140,6 +142,7 @@ export default function TyPages() {
       affiliateId: "",
       trackingDomain: "track.modemobile.com",
       buttonText: "CONTINUE",
+      fbShareUrl: "",
       isActive: true,
     });
   };
@@ -155,6 +158,7 @@ export default function TyPages() {
       affiliateId: page.affiliateId,
       trackingDomain: page.trackingDomain || "track.modemobile.com",
       buttonText: page.buttonText || "CONTINUE",
+      fbShareUrl: page.fbShareUrl || "",
       isActive: page.isActive,
     });
     setIsDialogOpen(true);
@@ -439,6 +443,16 @@ export default function TyPages() {
                   value={formData.buttonText}
                   onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Facebook Share URL</Label>
+                <Input 
+                  placeholder="https://example.com/landing-page"
+                  value={formData.fbShareUrl}
+                  onChange={(e) => setFormData({ ...formData, fbShareUrl: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">URL that opens when users click the FB Share button</p>
               </div>
 
               <div className="flex items-center gap-3">

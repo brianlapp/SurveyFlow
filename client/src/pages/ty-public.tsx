@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "wouter";
 import { Menu, X } from "lucide-react";
+import { FaFacebookF } from "react-icons/fa";
 
 interface NavItem {
   label: string;
@@ -15,11 +16,16 @@ interface TyPageData {
     fontFamily: string;
     navItems: NavItem[];
     primaryColor: string;
+    newsletterReminder: string | null;
+    footerCopyright: string | null;
+    termsUrl: string | null;
+    privacyUrl: string | null;
   };
   page: {
     offerTitle: string;
     offerImageUrl: string | null;
     buttonText: string;
+    fbShareUrl: string | null;
     clickUrl: string;
     impressionPixel: string;
   };
@@ -64,6 +70,12 @@ export default function TyPublic() {
     } catch (e) {
     }
     window.location.href = data!.page.clickUrl;
+  };
+
+  const handleFbShare = () => {
+    if (!data?.page.fbShareUrl) return;
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(data.page.fbShareUrl)}`;
+    window.open(shareUrl, '_blank', 'width=600,height=400');
   };
 
   if (loading) {
@@ -181,18 +193,63 @@ export default function TyPublic() {
           </div>
         </div>
 
-        <footer className="mt-8 pt-6 border-t">
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-            {navItems.map((item, i) => (
-              <a 
-                key={i} 
-                href={item.url}
-                className="hover:text-gray-700"
-              >
-                {item.label}
-              </a>
-            ))}
+        {page.fbShareUrl && (
+          <div className="mt-6 text-center">
+            <button 
+              onClick={handleFbShare}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1877F2] text-white rounded hover:bg-[#166FE5] transition-colors font-medium"
+            >
+              <FaFacebookF className="h-4 w-4" />
+              Share
+            </button>
           </div>
+        )}
+
+        {brand.newsletterReminder && (
+          <div className="mt-8 pt-6 border-t">
+            <p className="text-center text-gray-600 italic text-sm md:text-base font-medium">
+              {brand.newsletterReminder}
+            </p>
+          </div>
+        )}
+
+        <footer className="mt-8 pt-6 border-t text-center">
+          {brand.footerCopyright && (
+            <p className="text-gray-500 text-sm mb-3">{brand.footerCopyright}</p>
+          )}
+          
+          <div className="flex flex-wrap justify-center gap-4 text-sm">
+            {brand.termsUrl && (
+              <a 
+                href={brand.termsUrl}
+                className="text-blue-600 hover:underline"
+              >
+                Terms of Service
+              </a>
+            )}
+            {brand.privacyUrl && (
+              <a 
+                href={brand.privacyUrl}
+                className="text-blue-600 hover:underline"
+              >
+                Privacy Policy
+              </a>
+            )}
+          </div>
+          
+          {!brand.termsUrl && !brand.privacyUrl && navItems.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
+              {navItems.map((item, i) => (
+                <a 
+                  key={i} 
+                  href={item.url}
+                  className="hover:text-gray-700"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          )}
         </footer>
       </main>
     </div>

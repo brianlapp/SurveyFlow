@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -36,6 +37,10 @@ interface TyBrand {
   fontFamily: string;
   navItems: NavItem[];
   primaryColor: string;
+  newsletterReminder: string | null;
+  footerCopyright: string | null;
+  termsUrl: string | null;
+  privacyUrl: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -74,6 +79,10 @@ export default function TyBrands() {
     fontFamily: "Inter",
     navItems: defaultNavItems,
     primaryColor: "#22c55e",
+    newsletterReminder: "Thanks for signing up for our newsletter! Don't miss out—be sure to check your inbox and your SPAM folder so you can stay updated on the latest free samples, rewards, sweepstakes, and more!",
+    footerCopyright: "Copyright 2025© Mode Mobile",
+    termsUrl: "",
+    privacyUrl: "",
     isActive: true,
   });
 
@@ -134,6 +143,10 @@ export default function TyBrands() {
       fontFamily: "Inter",
       navItems: defaultNavItems,
       primaryColor: "#22c55e",
+      newsletterReminder: "Thanks for signing up for our newsletter! Don't miss out—be sure to check your inbox and your SPAM folder so you can stay updated on the latest free samples, rewards, sweepstakes, and more!",
+      footerCopyright: "Copyright 2025© Mode Mobile",
+      termsUrl: "",
+      privacyUrl: "",
       isActive: true,
     });
   };
@@ -148,6 +161,10 @@ export default function TyBrands() {
       fontFamily: brand.fontFamily || "Inter",
       navItems: (brand.navItems as NavItem[]) || defaultNavItems,
       primaryColor: brand.primaryColor || "#22c55e",
+      newsletterReminder: brand.newsletterReminder || "",
+      footerCopyright: brand.footerCopyright || "",
+      termsUrl: brand.termsUrl || "",
+      privacyUrl: brand.privacyUrl || "",
       isActive: brand.isActive,
     });
     setIsDialogOpen(true);
@@ -429,6 +446,50 @@ export default function TyBrands() {
                     </Button>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">Footer Section</h4>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Newsletter Reminder Text</Label>
+                  <Textarea 
+                    placeholder="Thanks for signing up for our newsletter! Don't miss out..."
+                    value={formData.newsletterReminder}
+                    onChange={(e) => setFormData({ ...formData, newsletterReminder: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Footer Copyright</Label>
+                  <Input 
+                    placeholder="Copyright 2025© Mode Mobile"
+                    value={formData.footerCopyright}
+                    onChange={(e) => setFormData({ ...formData, footerCopyright: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Terms of Service URL</Label>
+                    <Input 
+                      placeholder="https://example.com/terms"
+                      value={formData.termsUrl}
+                      onChange={(e) => setFormData({ ...formData, termsUrl: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Privacy Policy URL</Label>
+                    <Input 
+                      placeholder="https://example.com/privacy"
+                      value={formData.privacyUrl}
+                      onChange={(e) => setFormData({ ...formData, privacyUrl: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
