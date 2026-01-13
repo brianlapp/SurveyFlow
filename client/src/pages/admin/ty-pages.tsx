@@ -499,47 +499,96 @@ export default function TyPages() {
             </div>
 
             <div className="border rounded-lg p-4 bg-white">
-              <h4 className="text-sm font-medium mb-3 text-center">Mobile Preview</h4>
-              <div className="border rounded-lg overflow-hidden max-w-[320px] mx-auto shadow-lg" style={{ fontFamily: brand.fontFamily }}>
-                <div className="bg-white p-4">
-                  {brand.logoUrl && (
-                    <img src={brand.logoUrl} alt={brand.name} className="h-10 mx-auto mb-3" />
-                  )}
-                  <h2 className="text-xl font-bold text-center mb-2">{brand.thankYouTitle}</h2>
-                  
-                  <div className="flex justify-center gap-3 text-xs text-gray-500 border-b pb-3 mb-4">
-                    {(brand.navItems as { label: string; url: string }[])?.slice(0, 4).map((item, i) => (
-                      <span key={i}>{item.label}</span>
-                    ))}
-                  </div>
+              <h4 className="text-sm font-medium mb-3 text-center">
+                {formData.layoutType === 'fullwidth' ? 'Full Width Preview' : 'Mobile Preview'}
+              </h4>
+              
+              {formData.layoutType === 'fullwidth' ? (
+                <div className="border rounded-lg overflow-hidden max-w-[320px] mx-auto shadow-lg bg-white" style={{ fontFamily: brand.fontFamily }}>
+                  <div className="text-center py-4 px-3">
+                    {brand.logoUrl && (
+                      <img src={brand.logoUrl} alt={brand.name} className="h-8 mx-auto mb-2" />
+                    )}
+                    <h2 className="text-lg font-bold mb-2">{brand.thankYouTitle}</h2>
+                    
+                    <div className="flex justify-center gap-2 text-xs text-gray-500 mb-3">
+                      {(brand.navItems as { label: string; url: string }[])?.slice(0, 4).map((item, i) => (
+                        <span key={i}>{item.label}</span>
+                      ))}
+                    </div>
 
-                  <p className="text-center font-bold text-sm mb-4" style={{ color: brand.primaryColor }}>
-                    {formData.offerTitle || "Your offer title here"}
-                  </p>
+                    <p className="font-bold text-sm mb-3" style={{ color: brand.primaryColor }}>
+                      {formData.offerTitle || "Your offer title here"}
+                    </p>
+                  </div>
 
                   {formData.offerImageUrl ? (
                     <img 
                       src={formData.offerImageUrl} 
                       alt="Offer" 
-                      className="w-full rounded-lg mb-4"
-                      onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/300x200?text=Offer+Image')}
+                      className="w-full"
+                      onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Full+Width+Image')}
                     />
                   ) : (
-                    <div className="w-full aspect-video bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
-                      <ImageIcon className="h-12 w-12 text-gray-300" />
+                    <div className="w-full aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                      <ImageIcon className="h-16 w-16 text-gray-300" />
                     </div>
                   )}
 
-                  <button 
-                    className="w-full py-3 rounded-full text-white font-bold text-lg"
-                    style={{ backgroundColor: brand.primaryColor }}
-                  >
-                    {formData.buttonText || "CONTINUE"}
-                  </button>
-
-                  <p className="text-center text-xs text-gray-400 mt-3">*sponsored*</p>
+                  <div className="p-4">
+                    <button 
+                      className="w-full py-3 rounded-full text-white font-bold"
+                      style={{ backgroundColor: brand.primaryColor }}
+                    >
+                      {formData.buttonText || "CONTINUE"}
+                    </button>
+                    <p className="text-center text-xs text-gray-400 mt-2">*sponsored*</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden max-w-[320px] mx-auto shadow-lg" style={{ fontFamily: brand.fontFamily }}>
+                  <div className="bg-white p-4">
+                    {brand.logoUrl && (
+                      <img src={brand.logoUrl} alt={brand.name} className="h-10 mx-auto mb-3" />
+                    )}
+                    <h2 className="text-xl font-bold text-center mb-2">{brand.thankYouTitle}</h2>
+                    
+                    <div className="flex justify-center gap-3 text-xs text-gray-500 border-b pb-3 mb-4">
+                      {(brand.navItems as { label: string; url: string }[])?.slice(0, 4).map((item, i) => (
+                        <span key={i}>{item.label}</span>
+                      ))}
+                    </div>
+
+                    <div className="border rounded-lg p-3 shadow-sm">
+                      <p className="text-center font-bold text-sm mb-3" style={{ color: brand.primaryColor }}>
+                        {formData.offerTitle || "Your offer title here"}
+                      </p>
+
+                      {formData.offerImageUrl ? (
+                        <img 
+                          src={formData.offerImageUrl} 
+                          alt="Offer" 
+                          className="w-full rounded-lg mb-3"
+                          onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/300x200?text=Offer+Image')}
+                        />
+                      ) : (
+                        <div className="w-full aspect-video bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
+                          <ImageIcon className="h-12 w-12 text-gray-300" />
+                        </div>
+                      )}
+
+                      <button 
+                        className="w-full py-3 rounded-full text-white font-bold text-lg"
+                        style={{ backgroundColor: brand.primaryColor }}
+                      >
+                        {formData.buttonText || "CONTINUE"}
+                      </button>
+
+                      <p className="text-center text-xs text-gray-400 mt-3">*sponsored*</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>
