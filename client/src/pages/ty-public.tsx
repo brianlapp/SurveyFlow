@@ -195,12 +195,28 @@ export default function TyPublic() {
 
   const renderCardLayout = () => (
     <main className="max-w-lg mx-auto px-4 py-6">
+      {brand.logoUrl && (
+        <img src={brand.logoUrl} alt={brand.name} className="h-10 md:h-12 mx-auto mb-4" />
+      )}
+      
       <h1 
-        className="text-2xl md:text-3xl font-bold text-center mb-6"
+        className="text-2xl md:text-3xl font-bold text-center mb-4"
         style={{ color: brand.headingColor || brand.primaryColor }}
       >
         {brand.thankYouTitle}
       </h1>
+
+      <nav className="flex flex-wrap justify-center gap-4 text-sm text-gray-600 mb-6">
+        {navItems.map((item, i) => (
+          <a 
+            key={i} 
+            href={item.url}
+            className="hover:text-gray-900 transition-colors"
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
 
       <div className="bg-white rounded-xl shadow-lg overflow-hidden border">
         <div className="p-4 md:p-6">
@@ -347,8 +363,6 @@ export default function TyPublic() {
         href={`https://fonts.googleapis.com/css2?family=${brand.fontFamily.replace(' ', '+')}&display=swap`} 
         rel="stylesheet" 
       />
-      
-      {!isFullWidth && renderHeader()}
       
       {isFullWidth ? renderFullWidthLayout() : renderCardLayout()}
     </div>
