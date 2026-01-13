@@ -185,6 +185,42 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Thank You Page Brands
+export const tyBrands = pgTable("ty_brands", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).unique().notNull(),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  thankYouTitle: varchar("thank_you_title", { length: 255 }).default('Thank you for joining!'),
+  fontFamily: varchar("font_family", { length: 100 }).default('Inter'),
+  navItems: jsonb("nav_items").default([]), // Array of { label: string, url: string }
+  primaryColor: varchar("primary_color", { length: 20 }).default('#22c55e'),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Thank You Pages (offers within brands)
+export const tyPages = pgTable("ty_pages", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  brandId: uuid("brand_id").references(() => tyBrands.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull(),
+  offerTitle: varchar("offer_title", { length: 255 }).notNull(),
+  offerImageUrl: varchar("offer_image_url", { length: 500 }),
+  tuneOfferId: varchar("tune_offer_id", { length: 100 }).notNull(),
+  affiliateId: varchar("affiliate_id", { length: 100 }).notNull(),
+  trackingDomain: varchar("tracking_domain", { length: 255 }).default('track.modemobile.com'),
+  buttonText: varchar("button_text", { length: 50 }).default('CONTINUE'),
+  isActive: boolean("is_active").default(true),
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("unique_brand_page_slug").on(table.brandId, table.slug),
+]);
+
 // Relations
 export const endUsersRelations = relations(endUsers, ({ many }) => ({
   responses: many(responses),
@@ -226,6 +262,17 @@ export const postbacksRelations = relations(postbacks, ({ one }) => ({
   endUser: one(endUsers, {
     fields: [postbacks.endUserId],
     references: [endUsers.id],
+  }),
+}));
+
+export const tyBrandsRelations = relations(tyBrands, ({ many }) => ({
+  pages: many(tyPages),
+}));
+
+export const tyPagesRelations = relations(tyPages, ({ one }) => ({
+  brand: one(tyBrands, {
+    fields: [tyPages.brandId],
+    references: [tyBrands.id],
   }),
 }));
 
@@ -271,6 +318,20 @@ export const insertGiveawaySchema = createInsertSchema(giveaways).omit({
   updatedAt: true,
 });
 
+export const insertTyBrandSchema = createInsertSchema(tyBrands).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTyPageSchema = createInsertSchema(tyPages).omit({
+  id: true,
+  impressions: true,
+  clicks: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -289,3 +350,7 @@ export type InsertGiveaway = z.infer<typeof insertGiveawaySchema>;
 export type Postback = typeof postbacks.$inferSelect;
 export type DailyStat = typeof dailyStats.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
+export type TyBrand = typeof tyBrands.$inferSelect;
+export type InsertTyBrand = z.infer<typeof insertTyBrandSchema>;
+export type TyPage = typeof tyPages.$inferSelect;
+export type InsertTyPage = z.infer<typeof insertTyPageSchema>;

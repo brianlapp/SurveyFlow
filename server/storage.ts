@@ -9,6 +9,8 @@ import {
   dailyStats,
   settings,
   giveaways,
+  tyBrands,
+  tyPages,
   type User,
   type UpsertUser,
   type EndUser,
@@ -26,6 +28,10 @@ import {
   type Postback,
   type DailyStat,
   type Setting,
+  type TyBrand,
+  type InsertTyBrand,
+  type TyPage,
+  type InsertTyPage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, sum, count, avg } from "drizzle-orm";
@@ -98,6 +104,24 @@ export interface IStorage {
   getSetting(key: string): Promise<Setting | undefined>;
   setSetting(key: string, value: string): Promise<Setting>;
   getSettings(): Promise<Setting[]>;
+  
+  // TY Brand operations
+  createTyBrand(brand: InsertTyBrand): Promise<TyBrand>;
+  getTyBrands(): Promise<TyBrand[]>;
+  getTyBrand(id: string): Promise<TyBrand | undefined>;
+  getTyBrandBySlug(slug: string): Promise<TyBrand | undefined>;
+  updateTyBrand(id: string, data: Partial<TyBrand>): Promise<TyBrand>;
+  deleteTyBrand(id: string): Promise<void>;
+  
+  // TY Page operations
+  createTyPage(page: InsertTyPage): Promise<TyPage>;
+  getTyPagesByBrand(brandId: string): Promise<TyPage[]>;
+  getTyPage(id: string): Promise<TyPage | undefined>;
+  getTyPageBySlug(brandId: string, slug: string): Promise<TyPage | undefined>;
+  updateTyPage(id: string, data: Partial<TyPage>): Promise<TyPage>;
+  deleteTyPage(id: string): Promise<void>;
+  incrementTyPageImpressions(id: string): Promise<void>;
+  incrementTyPageClicks(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -622,6 +646,90 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSourceThreshold(source: string): Promise<void> {
     await db.delete(settings).where(eq(settings.key, `threshold_${source}`));
+  }
+
+  // TY Brand operations
+  async createTyBrand(brand: InsertTyBrand): Promise<TyBrand> {
+    const [newBrand] = await db.insert(tyBrands).values(brand).returning();
+    return newBrand;
+  }
+
+  async getTyBrands(): Promise<TyBrand[]> {
+    return await db.select().from(tyBrands).orderBy(desc(tyBrands.createdAt));
+  }
+
+  async getTyBrand(id: string): Promise<TyBrand | undefined> {
+    const [brand] = await db.select().from(tyBrands).where(eq(tyBrands.id, id));
+    return brand;
+  }
+
+  async getTyBrandBySlug(slug: string): Promise<TyBrand | undefined> {
+    const [brand] = await db.select().from(tyBrands).where(eq(tyBrands.slug, slug));
+    return brand;
+  }
+
+  async updateTyBrand(id: string, data: Partial<TyBrand>): Promise<TyBrand> {
+    const [brand] = await db
+      .update(tyBrands)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tyBrands.id, id))
+      .returning();
+    return brand;
+  }
+
+  async deleteTyBrand(id: string): Promise<void> {
+    await db.delete(tyPages).where(eq(tyPages.brandId, id));
+    await db.delete(tyBrands).where(eq(tyBrands.id, id));
+  }
+
+  // TY Page operations
+  async createTyPage(page: InsertTyPage): Promise<TyPage> {
+    const [newPage] = await db.insert(tyPages).values(page).returning();
+    return newPage;
+  }
+
+  async getTyPagesByBrand(brandId: string): Promise<TyPage[]> {
+    return await db.select().from(tyPages).where(eq(tyPages.brandId, brandId)).orderBy(desc(tyPages.createdAt));
+  }
+
+  async getTyPage(id: string): Promise<TyPage | undefined> {
+    const [page] = await db.select().from(tyPages).where(eq(tyPages.id, id));
+    return page;
+  }
+
+  async getTyPageBySlug(brandId: string, slug: string): Promise<TyPage | undefined> {
+    const [page] = await db
+      .select()
+      .from(tyPages)
+      .where(and(eq(tyPages.brandId, brandId), eq(tyPages.slug, slug)));
+    return page;
+  }
+
+  async updateTyPage(id: string, data: Partial<TyPage>): Promise<TyPage> {
+    const [page] = await db
+      .update(tyPages)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tyPages.id, id))
+      .returning();
+    return page;
+  }
+
+  async deleteTyPage(id: string): Promise<void> {
+    await db.delete(tyPages).where(eq(tyPages.id, id));
+  }
+
+  async incrementTyPageImpressions(id: string): Promise<void> {
+    await db
+      .update(tyPages)
+      .set({ impressions: sql`${tyPages.impressions} + 1` })
+      .where(eq(tyPages.id, id));
+  }
+
+  async incrementTyPageClicks(id: string): Promise<void> {
+    await db
+      .update(tyPages)
+      .set({ clicks: sql`${tyPages.clicks} + 1` })
+      .where(eq(tyPages.id, id));
   }
 }
 
