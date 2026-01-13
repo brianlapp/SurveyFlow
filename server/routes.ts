@@ -1349,6 +1349,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fontFamily: brand.fontFamily,
           navItems: brand.navItems,
           primaryColor: brand.primaryColor,
+          headingColor: brand.headingColor,
+          taglineColor: brand.taglineColor,
           newsletterReminder: brand.newsletterReminder,
           footerCopyright: brand.footerCopyright,
           termsUrl: brand.termsUrl,

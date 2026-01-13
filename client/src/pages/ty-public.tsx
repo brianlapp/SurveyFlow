@@ -16,6 +16,8 @@ interface TyPageData {
     fontFamily: string;
     navItems: NavItem[];
     primaryColor: string;
+    headingColor: string;
+    taglineColor: string;
     newsletterReminder: string | null;
     footerCopyright: string | null;
     termsUrl: string | null;
@@ -159,7 +161,7 @@ export default function TyPublic() {
       <main className="max-w-lg mx-auto px-4 py-6">
         <h1 
           className="text-2xl md:text-3xl font-bold text-center mb-6"
-          style={{ color: brand.primaryColor }}
+          style={{ color: brand.headingColor || brand.primaryColor }}
         >
           {brand.thankYouTitle}
         </h1>
@@ -168,7 +170,7 @@ export default function TyPublic() {
           <div className="p-4 md:p-6">
             <p 
               className="text-center font-bold text-lg mb-4"
-              style={{ color: brand.primaryColor }}
+              style={{ color: brand.taglineColor || brand.primaryColor }}
             >
               {page.offerTitle}
             </p>

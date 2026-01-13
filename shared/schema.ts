@@ -194,7 +194,9 @@ export const tyBrands = pgTable("ty_brands", {
   thankYouTitle: varchar("thank_you_title", { length: 255 }).default('Thank you for joining!'),
   fontFamily: varchar("font_family", { length: 100 }).default('Inter'),
   navItems: jsonb("nav_items").default([]), // Array of { label: string, url: string }
-  primaryColor: varchar("primary_color", { length: 20 }).default('#22c55e'),
+  primaryColor: varchar("primary_color", { length: 20 }).default('#22c55e'), // Button color
+  headingColor: varchar("heading_color", { length: 20 }).default('#22c55e'), // "Thank you" heading color
+  taglineColor: varchar("tagline_color", { length: 20 }).default('#22c55e'), // Offer tagline color
   newsletterReminder: text("newsletter_reminder"), // Footer reminder text
   footerCopyright: varchar("footer_copyright", { length: 255 }), // e.g., "Copyright 2025© Mode Mobile"
   termsUrl: varchar("terms_url", { length: 500 }),

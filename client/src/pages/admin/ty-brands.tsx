@@ -37,6 +37,8 @@ interface TyBrand {
   fontFamily: string;
   navItems: NavItem[];
   primaryColor: string;
+  headingColor: string;
+  taglineColor: string;
   newsletterReminder: string | null;
   footerCopyright: string | null;
   termsUrl: string | null;
@@ -79,6 +81,8 @@ export default function TyBrands() {
     fontFamily: "Inter",
     navItems: defaultNavItems,
     primaryColor: "#22c55e",
+    headingColor: "#22c55e",
+    taglineColor: "#22c55e",
     newsletterReminder: "Thanks for signing up for our newsletter! Don't miss out—be sure to check your inbox and your SPAM folder so you can stay updated on the latest free samples, rewards, sweepstakes, and more!",
     footerCopyright: "Copyright 2025© Mode Mobile",
     termsUrl: "",
@@ -143,6 +147,8 @@ export default function TyBrands() {
       fontFamily: "Inter",
       navItems: defaultNavItems,
       primaryColor: "#22c55e",
+      headingColor: "#22c55e",
+      taglineColor: "#22c55e",
       newsletterReminder: "Thanks for signing up for our newsletter! Don't miss out—be sure to check your inbox and your SPAM folder so you can stay updated on the latest free samples, rewards, sweepstakes, and more!",
       footerCopyright: "Copyright 2025© Mode Mobile",
       termsUrl: "",
@@ -161,6 +167,8 @@ export default function TyBrands() {
       fontFamily: brand.fontFamily || "Inter",
       navItems: (brand.navItems as NavItem[]) || defaultNavItems,
       primaryColor: brand.primaryColor || "#22c55e",
+      headingColor: brand.headingColor || "#22c55e",
+      taglineColor: brand.taglineColor || "#22c55e",
       newsletterReminder: brand.newsletterReminder || "",
       footerCopyright: brand.footerCopyright || "",
       termsUrl: brand.termsUrl || "",
@@ -378,37 +386,76 @@ export default function TyBrands() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Font Family</Label>
-                <Select 
-                  value={formData.fontFamily} 
-                  onValueChange={(value) => setFormData({ ...formData, fontFamily: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fontOptions.map((font) => (
-                      <SelectItem key={font} value={font}>{font}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    type="color"
-                    value={formData.primaryColor}
-                    onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    className="w-12 h-10 p-1"
-                  />
-                  <Input 
-                    value={formData.primaryColor}
-                    onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    className="flex-1"
-                  />
+            <div className="space-y-2">
+              <Label>Font Family</Label>
+              <Select 
+                value={formData.fontFamily} 
+                onValueChange={(value) => setFormData({ ...formData, fontFamily: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontOptions.map((font) => (
+                    <SelectItem key={font} value={font}>{font}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">Color Settings</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Heading Color</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="color"
+                      value={formData.headingColor}
+                      onChange={(e) => setFormData({ ...formData, headingColor: e.target.value })}
+                      className="w-10 h-9 p-1"
+                    />
+                    <Input 
+                      value={formData.headingColor}
+                      onChange={(e) => setFormData({ ...formData, headingColor: e.target.value })}
+                      className="flex-1 text-xs"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Thank You title</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Tagline Color</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="color"
+                      value={formData.taglineColor}
+                      onChange={(e) => setFormData({ ...formData, taglineColor: e.target.value })}
+                      className="w-10 h-9 p-1"
+                    />
+                    <Input 
+                      value={formData.taglineColor}
+                      onChange={(e) => setFormData({ ...formData, taglineColor: e.target.value })}
+                      className="flex-1 text-xs"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Offer tagline</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Button Color</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="color"
+                      value={formData.primaryColor}
+                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                      className="w-10 h-9 p-1"
+                    />
+                    <Input 
+                      value={formData.primaryColor}
+                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                      className="flex-1 text-xs"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">CTA button</p>
                 </div>
               </div>
             </div>
