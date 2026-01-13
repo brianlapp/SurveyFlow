@@ -195,6 +195,10 @@ export const tyBrands = pgTable("ty_brands", {
   fontFamily: varchar("font_family", { length: 100 }).default('Inter'),
   navItems: jsonb("nav_items").default([]), // Array of { label: string, url: string }
   primaryColor: varchar("primary_color", { length: 20 }).default('#22c55e'),
+  newsletterReminder: text("newsletter_reminder"), // Footer reminder text
+  footerCopyright: varchar("footer_copyright", { length: 255 }), // e.g., "Copyright 2025© Mode Mobile"
+  termsUrl: varchar("terms_url", { length: 500 }),
+  privacyUrl: varchar("privacy_url", { length: 500 }),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -212,6 +216,7 @@ export const tyPages = pgTable("ty_pages", {
   affiliateId: varchar("affiliate_id", { length: 100 }).notNull(),
   trackingDomain: varchar("tracking_domain", { length: 255 }).default('track.modemobile.com'),
   buttonText: varchar("button_text", { length: 50 }).default('CONTINUE'),
+  fbShareUrl: varchar("fb_share_url", { length: 500 }), // URL to share on Facebook
   isActive: boolean("is_active").default(true),
   impressions: integer("impressions").default(0),
   clicks: integer("clicks").default(0),
