@@ -17,6 +17,7 @@ const pageConfig = {
   "/admin/questions": { title: "Questions Management", subtitle: "Manage survey questions and logic" },
   "/admin/analytics": { title: "Analytics & Reports", subtitle: "Analyze performance metrics" },
   "/admin/revenue": { title: "Revenue Tracking", subtitle: "Track revenue and postbacks" },
+  "/admin/postbacks": { title: "Postback Management", subtitle: "Configure and monitor affiliate postbacks" },
   "/admin/brands": { title: "Brand Landing Pages", subtitle: "Manage brand-specific experiences" },
   "/admin/settings": { title: "Platform Settings", subtitle: "Configure platform parameters" },
 };

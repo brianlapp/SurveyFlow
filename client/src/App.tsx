@@ -18,6 +18,7 @@ import Settings from "@/pages/admin/settings";
 import SurveyPreview from "@/pages/admin/survey-preview";
 import LivePreview from "@/pages/admin/live-preview";
 import Documentation from "@/pages/admin/documentation";
+import Postbacks from "@/pages/admin/postbacks";
 import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
@@ -66,6 +67,7 @@ function Router() {
             <Route path="/admin/survey-preview" component={SurveyPreview} />
             <Route path="/admin/live-preview" component={LivePreview} />
             <Route path="/admin/docs" component={Documentation} />
+            <Route path="/admin/postbacks" component={Postbacks} />
             <Route component={NotFound} />
           </Switch>
         </AdminLayout>
