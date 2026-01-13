@@ -1062,6 +1062,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Postback Management Routes
+  app.get('/api/postbacks', isAuthenticated, async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const postbacksList = await storage.getAllPostbacks({ status, limit, offset });
+      
+      // Join with user data for display
+      const postbacksWithUsers = await Promise.all(
+        postbacksList.map(async (postback) => {
+          const user = await storage.getEndUser(postback.endUserId);
+          return {
+            ...postback,
+            user: user ? {
+              id: user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              source: user.source,
+            } : null,
+          };
+        })
+      );
+      
+      res.json(postbacksWithUsers);
+    } catch (error) {
+      console.error("Error fetching postbacks:", error);
+      res.status(500).json({ message: "Failed to fetch postbacks" });
+    }
+  });
+
+  app.get('/api/postbacks/stats', isAuthenticated, async (req, res) => {
+    try {
+      const stats = await storage.getPostbackStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching postback stats:", error);
+      res.status(500).json({ message: "Failed to fetch postback stats" });
+    }
+  });
+
+  app.get('/api/postbacks/pending-users', isAuthenticated, async (req, res) => {
+    try {
+      const thresholdPercent = req.query.percent ? parseInt(req.query.percent as string) : 80;
+      const users = await storage.getUsersNearThreshold(thresholdPercent);
+      
+      // Get default threshold for progress calculation
+      const defaultThresholdSetting = await storage.getSetting('default_threshold');
+      const defaultThreshold = defaultThresholdSetting ? parseFloat(defaultThresholdSetting.value) : 3.00;
+      
+      // Add progress percentage to each user
+      const usersWithProgress = users.map(user => ({
+        ...user,
+        progress: Math.min(100, (parseFloat(user.totalRevenue?.toString() || '0') / defaultThreshold) * 100),
+        threshold: defaultThreshold,
+      }));
+      
+      res.json(usersWithProgress);
+    } catch (error) {
+      console.error("Error fetching pending users:", error);
+      res.status(500).json({ message: "Failed to fetch pending users" });
+    }
+  });
+
+  app.get('/api/postbacks/thresholds', isAuthenticated, async (req, res) => {
+    try {
+      const defaultThresholdSetting = await storage.getSetting('default_threshold');
+      const sourceThresholds = await storage.getSourceThresholds();
+      
+      res.json({
+        defaultThreshold: defaultThresholdSetting?.value || '3.00',
+        sourceThresholds: sourceThresholds.map(s => ({
+          source: s.key.replace('threshold_', ''),
+          threshold: s.value,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching thresholds:", error);
+      res.status(500).json({ message: "Failed to fetch thresholds" });
+    }
+  });
+
+  app.post('/api/postbacks/thresholds/source', isAuthenticated, async (req, res) => {
+    try {
+      const { source, threshold } = req.body;
+      if (!source || !threshold) {
+        return res.status(400).json({ message: "Source and threshold are required" });
+      }
+      
+      const setting = await storage.setSetting(`threshold_${source}`, threshold.toString());
+      res.json({ source, threshold: setting.value });
+    } catch (error) {
+      console.error("Error setting source threshold:", error);
+      res.status(500).json({ message: "Failed to set source threshold" });
+    }
+  });
+
+  app.delete('/api/postbacks/thresholds/source/:source', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteSourceThreshold(req.params.source);
+      res.json({ message: "Source threshold deleted" });
+    } catch (error) {
+      console.error("Error deleting source threshold:", error);
+      res.status(500).json({ message: "Failed to delete source threshold" });
+    }
+  });
+
+  app.get('/api/postbacks/config', isAuthenticated, async (req, res) => {
+    try {
+      const postbackUrl = await storage.getSetting('tune_postback_url');
+      res.json({
+        postbackUrl: postbackUrl?.value || '',
+        isConfigured: !!postbackUrl?.value,
+      });
+    } catch (error) {
+      console.error("Error fetching postback config:", error);
+      res.status(500).json({ message: "Failed to fetch postback config" });
+    }
+  });
+
+  app.put('/api/postbacks/config', isAuthenticated, async (req, res) => {
+    try {
+      const { postbackUrl } = req.body;
+      await storage.setSetting('tune_postback_url', postbackUrl || '');
+      res.json({ message: "Postback URL updated", postbackUrl });
+    } catch (error) {
+      console.error("Error updating postback config:", error);
+      res.status(500).json({ message: "Failed to update postback config" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -545,6 +545,84 @@ export class DatabaseStorage implements IStorage {
   async deleteGiveaway(id: string): Promise<void> {
     await db.delete(giveaways).where(eq(giveaways.id, id));
   }
+
+  // Postback management operations
+  async getAllPostbacks(filters?: { status?: string; limit?: number; offset?: number }): Promise<Postback[]> {
+    let query = db.select().from(postbacks);
+    
+    if (filters?.status) {
+      query = query.where(eq(postbacks.status, filters.status)) as typeof query;
+    }
+    
+    query = query.orderBy(desc(postbacks.createdAt)) as typeof query;
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return await query;
+  }
+
+  async getPostbackStats(): Promise<{
+    totalPostbacks: number;
+    successCount: number;
+    failedCount: number;
+    pendingCount: number;
+    totalRevenuePostedBack: number;
+    successRate: number;
+  }> {
+    const allPostbacks = await db.select().from(postbacks);
+    
+    const totalPostbacks = allPostbacks.length;
+    const successCount = allPostbacks.filter(p => p.status === 'sent' || p.status === 'success').length;
+    const failedCount = allPostbacks.filter(p => p.status === 'failed').length;
+    const pendingCount = allPostbacks.filter(p => p.status === 'pending').length;
+    const totalRevenuePostedBack = allPostbacks
+      .filter(p => p.status === 'sent' || p.status === 'success')
+      .reduce((sum, p) => sum + parseFloat(p.totalRevenue?.toString() || '0'), 0);
+    const successRate = totalPostbacks > 0 ? (successCount / totalPostbacks) * 100 : 0;
+    
+    return {
+      totalPostbacks,
+      successCount,
+      failedCount,
+      pendingCount,
+      totalRevenuePostedBack,
+      successRate,
+    };
+  }
+
+  async getUsersNearThreshold(thresholdPercent: number = 80): Promise<EndUser[]> {
+    const defaultThreshold = 3.00;
+    const minRevenue = (defaultThreshold * thresholdPercent) / 100;
+    
+    return await db
+      .select()
+      .from(endUsers)
+      .where(
+        and(
+          gte(endUsers.totalRevenue, minRevenue.toString()),
+          eq(endUsers.postbackFired, false)
+        )
+      )
+      .orderBy(desc(endUsers.totalRevenue));
+  }
+
+  async getSourceThresholds(): Promise<Setting[]> {
+    return await db
+      .select()
+      .from(settings)
+      .where(sql`${settings.key} LIKE 'threshold_%'`)
+      .orderBy(settings.key);
+  }
+
+  async deleteSourceThreshold(source: string): Promise<void> {
+    await db.delete(settings).where(eq(settings.key, `threshold_${source}`));
+  }
 }
 
 export const storage = new DatabaseStorage();
