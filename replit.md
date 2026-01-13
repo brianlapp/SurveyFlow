@@ -5,6 +5,7 @@ A multi-brand co-registration platform designed to transform user engagement int
 # Recent Changes
 
 ## Latest Updates (January 13, 2026)
+- **Thank You Page Manager**: New admin feature at `/admin/ty-brands` for creating branded post-conversion offer pages. Supports brand management (logo, font family, primary color, navigation items for FB compliance) and page management per brand (offer title, image, Tune offer ID + affiliate ID, button text). Public pages render at `/ty/{brand-slug}/{page-slug}` with mobile-first design, hamburger navigation, impression pixel firing, and click tracking. Includes embed code generator for iframe embedding on external sites. Database tables: ty_brands, ty_pages with impression/click metrics.
 - **Postback Management Page**: New admin page at `/admin/postbacks` for comprehensive affiliate postback management. Features include: postback history table with status filtering (success/failed/pending), statistics dashboard (total postbacks, success rate, revenue posted, pending count), pending users monitor showing users at 80%+ of threshold with manual trigger capability, threshold configuration (default $3.00 threshold plus source-specific overrides), and Tune postback URL configuration with show/hide toggle. APIs: GET/PUT /api/postbacks/config, GET /api/postbacks/stats, GET /api/postbacks/pending-users, CRUD for thresholds.
 
 ## Previous Updates (November 3, 2025)
@@ -60,6 +61,7 @@ Preferred communication style: Simple, everyday language.
 - **Offers Table**: Co-registration offers with targeting and payout configuration
 - **Responses Table**: User survey responses with question-answer mapping
 - **Revenue Tracking**: Offer interactions, postbacks, and daily statistics tables
+- **TY Brands/Pages**: Branded thank you page templates with inherited settings and per-page offer configuration
 
 ## Revenue System
 - **Smart Postback Logic**: Tracks cumulative revenue per user and fires affiliate postbacks only after reaching $3.00 threshold
