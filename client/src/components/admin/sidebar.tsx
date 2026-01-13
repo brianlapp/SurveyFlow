@@ -13,7 +13,8 @@ import {
   LogOut,
   User,
   BookOpen,
-  Send
+  Send,
+  Gift
 } from "lucide-react";
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { name: "Postbacks", href: "/admin/postbacks", icon: Send },
+  { name: "TY Pages", href: "/admin/ty-brands", icon: Gift },
   { name: "Brands", href: "/admin/brands", icon: Building },
   { name: "Documentation", href: "/admin/docs", icon: BookOpen },
   { name: "Settings", href: "/admin/settings", icon: Settings },
