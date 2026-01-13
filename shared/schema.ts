@@ -219,6 +219,7 @@ export const tyPages = pgTable("ty_pages", {
   trackingDomain: varchar("tracking_domain", { length: 255 }).default('track.modemobile.com'),
   buttonText: varchar("button_text", { length: 50 }).default('CONTINUE'),
   fbShareUrl: varchar("fb_share_url", { length: 500 }), // URL to share on Facebook
+  layoutType: varchar("layout_type", { length: 20 }).default('card'), // 'card' or 'fullwidth'
   isActive: boolean("is_active").default(true),
   impressions: integer("impressions").default(0),
   clicks: integer("clicks").default(0),
