@@ -26,6 +26,7 @@ import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
 import ExitLottery from "@/pages/user/exit-lottery";
 import PublicPreview from "@/pages/public-preview";
+import TyPublic from "@/pages/ty-public";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/survey/:sessionId?" component={Survey} />
       <Route path="/exit/:sessionId?" component={ExitLottery} />
       <Route path="/preview" component={PublicPreview} />
+      <Route path="/ty/:brandSlug/:pageSlug" component={TyPublic} />
       
       {/* Authenticated admin routes */}
       {isAuthenticated && (
