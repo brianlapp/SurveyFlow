@@ -1195,6 +1195,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Thank You Page Brand Routes
+  app.get('/api/ty-brands', isAuthenticated, async (req, res) => {
+    try {
+      const brands = await storage.getTyBrands();
+      res.json(brands);
+    } catch (error) {
+      console.error("Error fetching TY brands:", error);
+      res.status(500).json({ message: "Failed to fetch brands" });
+    }
+  });
+
+  app.post('/api/ty-brands', isAuthenticated, async (req, res) => {
+    try {
+      const brand = await storage.createTyBrand(req.body);
+      res.json(brand);
+    } catch (error: any) {
+      console.error("Error creating TY brand:", error);
+      if (error.code === '23505') {
+        res.status(400).json({ message: "A brand with this slug already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to create brand" });
+      }
+    }
+  });
+
+  app.get('/api/ty-brands/:id', isAuthenticated, async (req, res) => {
+    try {
+      const brand = await storage.getTyBrand(req.params.id);
+      if (!brand) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      res.json(brand);
+    } catch (error) {
+      console.error("Error fetching TY brand:", error);
+      res.status(500).json({ message: "Failed to fetch brand" });
+    }
+  });
+
+  app.put('/api/ty-brands/:id', isAuthenticated, async (req, res) => {
+    try {
+      const brand = await storage.updateTyBrand(req.params.id, req.body);
+      res.json(brand);
+    } catch (error: any) {
+      console.error("Error updating TY brand:", error);
+      if (error.code === '23505') {
+        res.status(400).json({ message: "A brand with this slug already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to update brand" });
+      }
+    }
+  });
+
+  app.delete('/api/ty-brands/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteTyBrand(req.params.id);
+      res.json({ message: "Brand deleted" });
+    } catch (error) {
+      console.error("Error deleting TY brand:", error);
+      res.status(500).json({ message: "Failed to delete brand" });
+    }
+  });
+
+  // Thank You Page Routes (within a brand)
+  app.get('/api/ty-brands/:brandId/pages', isAuthenticated, async (req, res) => {
+    try {
+      const pages = await storage.getTyPagesByBrand(req.params.brandId);
+      res.json(pages);
+    } catch (error) {
+      console.error("Error fetching TY pages:", error);
+      res.status(500).json({ message: "Failed to fetch pages" });
+    }
+  });
+
+  app.post('/api/ty-brands/:brandId/pages', isAuthenticated, async (req, res) => {
+    try {
+      const pageData = { ...req.body, brandId: req.params.brandId };
+      const page = await storage.createTyPage(pageData);
+      res.json(page);
+    } catch (error: any) {
+      console.error("Error creating TY page:", error);
+      if (error.code === '23505') {
+        res.status(400).json({ message: "A page with this slug already exists for this brand" });
+      } else {
+        res.status(500).json({ message: "Failed to create page" });
+      }
+    }
+  });
+
+  app.get('/api/ty-pages/:id', isAuthenticated, async (req, res) => {
+    try {
+      const page = await storage.getTyPage(req.params.id);
+      if (!page) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      res.json(page);
+    } catch (error) {
+      console.error("Error fetching TY page:", error);
+      res.status(500).json({ message: "Failed to fetch page" });
+    }
+  });
+
+  app.put('/api/ty-pages/:id', isAuthenticated, async (req, res) => {
+    try {
+      const page = await storage.updateTyPage(req.params.id, req.body);
+      res.json(page);
+    } catch (error: any) {
+      console.error("Error updating TY page:", error);
+      if (error.code === '23505') {
+        res.status(400).json({ message: "A page with this slug already exists for this brand" });
+      } else {
+        res.status(500).json({ message: "Failed to update page" });
+      }
+    }
+  });
+
+  app.delete('/api/ty-pages/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteTyPage(req.params.id);
+      res.json({ message: "Page deleted" });
+    } catch (error) {
+      console.error("Error deleting TY page:", error);
+      res.status(500).json({ message: "Failed to delete page" });
+    }
+  });
+
+  // Public TY page - no auth required
+  app.get('/api/public/ty/:brandSlug/:pageSlug', async (req, res) => {
+    try {
+      const brand = await storage.getTyBrandBySlug(req.params.brandSlug);
+      if (!brand || !brand.isActive) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      
+      const page = await storage.getTyPageBySlug(brand.id, req.params.pageSlug);
+      if (!page || !page.isActive) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      
+      // Track impression
+      await storage.incrementTyPageImpressions(page.id);
+      
+      // Generate Tune URLs
+      const trackingDomain = page.trackingDomain || 'track.modemobile.com';
+      const clickUrl = `https://${trackingDomain}/aff_c?offer_id=${page.tuneOfferId}&aff_id=${page.affiliateId}`;
+      const impressionPixel = `https://${trackingDomain}/aff_i?offer_id=${page.tuneOfferId}&aff_id=${page.affiliateId}`;
+      
+      res.json({
+        brand: {
+          name: brand.name,
+          logoUrl: brand.logoUrl,
+          thankYouTitle: brand.thankYouTitle,
+          fontFamily: brand.fontFamily,
+          navItems: brand.navItems,
+          primaryColor: brand.primaryColor,
+        },
+        page: {
+          offerTitle: page.offerTitle,
+          offerImageUrl: page.offerImageUrl,
+          buttonText: page.buttonText,
+          clickUrl,
+          impressionPixel,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching public TY page:", error);
+      res.status(500).json({ message: "Failed to fetch page" });
+    }
+  });
+
+  // Track clicks on TY pages
+  app.post('/api/public/ty/:brandSlug/:pageSlug/click', async (req, res) => {
+    try {
+      const brand = await storage.getTyBrandBySlug(req.params.brandSlug);
+      if (!brand) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      
+      const page = await storage.getTyPageBySlug(brand.id, req.params.pageSlug);
+      if (!page) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      
+      await storage.incrementTyPageClicks(page.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking click:", error);
+      res.status(500).json({ message: "Failed to track click" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
