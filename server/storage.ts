@@ -116,12 +116,16 @@ export interface IStorage {
   // TY Page operations
   createTyPage(page: InsertTyPage): Promise<TyPage>;
   getTyPagesByBrand(brandId: string): Promise<TyPage[]>;
+  getTyPagesByBrandOrdered(brandId: string): Promise<TyPage[]>;
+  getActiveTyPagesByBrandOrdered(brandId: string): Promise<TyPage[]>;
   getTyPage(id: string): Promise<TyPage | undefined>;
   getTyPageBySlug(brandId: string, slug: string): Promise<TyPage | undefined>;
   updateTyPage(id: string, data: Partial<TyPage>): Promise<TyPage>;
   deleteTyPage(id: string): Promise<void>;
   incrementTyPageImpressions(id: string): Promise<void>;
   incrementTyPageClicks(id: string): Promise<void>;
+  reorderTyPages(pageOrders: { id: string; displayOrder: number }[]): Promise<void>;
+  getNextEmbedPage(brandId: string): Promise<TyPage | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -730,6 +734,49 @@ export class DatabaseStorage implements IStorage {
       .update(tyPages)
       .set({ clicks: sql`${tyPages.clicks} + 1` })
       .where(eq(tyPages.id, id));
+  }
+
+  async getTyPagesByBrandOrdered(brandId: string): Promise<TyPage[]> {
+    return await db
+      .select()
+      .from(tyPages)
+      .where(eq(tyPages.brandId, brandId))
+      .orderBy(tyPages.displayOrder);
+  }
+
+  async getActiveTyPagesByBrandOrdered(brandId: string): Promise<TyPage[]> {
+    return await db
+      .select()
+      .from(tyPages)
+      .where(and(eq(tyPages.brandId, brandId), eq(tyPages.isActive, true)))
+      .orderBy(tyPages.displayOrder);
+  }
+
+  async reorderTyPages(pageOrders: { id: string; displayOrder: number }[]): Promise<void> {
+    for (const { id, displayOrder } of pageOrders) {
+      await db
+        .update(tyPages)
+        .set({ displayOrder, updatedAt: new Date() })
+        .where(eq(tyPages.id, id));
+    }
+  }
+
+  async getNextEmbedPage(brandId: string): Promise<TyPage | undefined> {
+    const brand = await this.getTyBrand(brandId);
+    if (!brand) return undefined;
+
+    const activePages = await this.getActiveTyPagesByBrandOrdered(brandId);
+    if (activePages.length === 0) return undefined;
+
+    const currentIndex = brand.nextEmbedIndex || 0;
+    const nextIndex = (currentIndex + 1) % activePages.length;
+
+    await db
+      .update(tyBrands)
+      .set({ nextEmbedIndex: nextIndex, updatedAt: new Date() })
+      .where(eq(tyBrands.id, brandId));
+
+    return activePages[currentIndex % activePages.length];
   }
 }
 

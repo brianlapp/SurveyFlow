@@ -1320,6 +1320,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Embed metadata - get brand with ordered pages for embed dialog
+  app.get('/api/ty-brands/:brandId/embed-metadata', isAuthenticated, async (req, res) => {
+    try {
+      const brand = await storage.getTyBrand(req.params.brandId);
+      if (!brand) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      const pages = await storage.getTyPagesByBrandOrdered(req.params.brandId);
+      res.json({ brand, pages });
+    } catch (error) {
+      console.error("Error fetching embed metadata:", error);
+      res.status(500).json({ message: "Failed to fetch embed metadata" });
+    }
+  });
+
+  // Reorder pages for a brand
+  app.post('/api/ty-brands/:brandId/reorder', isAuthenticated, async (req, res) => {
+    try {
+      const { pageOrders } = req.body; // Array of { id, displayOrder }
+      if (!Array.isArray(pageOrders)) {
+        return res.status(400).json({ message: "pageOrders must be an array" });
+      }
+      await storage.reorderTyPages(pageOrders);
+      const pages = await storage.getTyPagesByBrandOrdered(req.params.brandId);
+      res.json({ pages });
+    } catch (error) {
+      console.error("Error reordering pages:", error);
+      res.status(500).json({ message: "Failed to reorder pages" });
+    }
+  });
+
+  // Toggle page active status
+  app.patch('/api/ty-pages/:id/status', isAuthenticated, async (req, res) => {
+    try {
+      const page = await storage.getTyPage(req.params.id);
+      if (!page) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      const updated = await storage.updateTyPage(req.params.id, { isActive: !page.isActive });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error toggling page status:", error);
+      res.status(500).json({ message: "Failed to toggle status" });
+    }
+  });
+
   // Public TY page - no auth required
   app.get('/api/public/ty/:brandSlug/:pageSlug', async (req, res) => {
     try {
@@ -1389,6 +1435,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       console.error("Error tracking click:", error);
+      res.status(500).json({ message: "Failed to track click" });
+    }
+  });
+
+  // Public embed cycling endpoint - returns next offer in rotation
+  app.get('/api/embed/ty/:brandSlug', async (req, res) => {
+    try {
+      const brand = await storage.getTyBrandBySlug(req.params.brandSlug);
+      if (!brand || !brand.isActive) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      
+      const page = await storage.getNextEmbedPage(brand.id);
+      if (!page) {
+        return res.status(404).json({ message: "No active pages found" });
+      }
+      
+      // Track impression
+      await storage.incrementTyPageImpressions(page.id);
+      
+      // Generate Tune URLs
+      const trackingDomain = page.trackingDomain || 'track.modemobile.com';
+      const clickUrl = `https://${trackingDomain}/aff_c?offer_id=${page.tuneOfferId}&aff_id=${page.affiliateId}`;
+      const impressionPixel = `https://${trackingDomain}/aff_i?offer_id=${page.tuneOfferId}&aff_id=${page.affiliateId}`;
+      
+      res.json({
+        brand: {
+          name: brand.name,
+          slug: brand.slug,
+          logoUrl: brand.logoUrl,
+          thankYouTitle: brand.thankYouTitle,
+          fontFamily: brand.fontFamily,
+          navItems: brand.navItems,
+          primaryColor: brand.primaryColor,
+          headingColor: brand.headingColor,
+          taglineColor: brand.taglineColor,
+          newsletterReminder: brand.newsletterReminder,
+          footerCopyright: brand.footerCopyright,
+          termsUrl: brand.termsUrl,
+          privacyUrl: brand.privacyUrl,
+        },
+        page: {
+          id: page.id,
+          slug: page.slug,
+          offerTitle: page.offerTitle,
+          offerImageUrl: page.offerImageUrl,
+          buttonText: page.buttonText,
+          fbShareUrl: page.fbShareUrl,
+          layoutType: page.layoutType || 'card',
+          clickUrl,
+          impressionPixel,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching embed page:", error);
+      res.status(500).json({ message: "Failed to fetch embed page" });
+    }
+  });
+
+  // Track clicks on embed pages
+  app.post('/api/embed/ty/:brandSlug/click', async (req, res) => {
+    try {
+      const { pageId } = req.body;
+      if (!pageId) {
+        return res.status(400).json({ message: "pageId required" });
+      }
+      await storage.incrementTyPageClicks(pageId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking embed click:", error);
       res.status(500).json({ message: "Failed to track click" });
     }
   });

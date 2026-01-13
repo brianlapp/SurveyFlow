@@ -20,7 +20,10 @@ import {
   FileText, 
   ExternalLink,
   Image as ImageIcon,
-  X
+  X,
+  Code,
+  Copy,
+  Check
 } from "lucide-react";
 
 interface NavItem {
@@ -45,6 +48,17 @@ interface TyBrand {
   privacyUrl: string | null;
   isActive: boolean;
   createdAt: string;
+}
+
+interface TyPage {
+  id: string;
+  brandId: string;
+  name: string;
+  slug: string;
+  offerTitle: string;
+  offerImageUrl: string | null;
+  displayOrder: number;
+  isActive: boolean;
 }
 
 const fontOptions = [
@@ -72,6 +86,10 @@ export default function TyBrands() {
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<TyBrand | null>(null);
+  const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+  const [embedBrand, setEmbedBrand] = useState<TyBrand | null>(null);
+  const [embedPages, setEmbedPages] = useState<TyPage[]>([]);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -221,6 +239,34 @@ export default function TyBrands() {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   };
 
+  const openEmbedDialog = async (brand: TyBrand) => {
+    setEmbedBrand(brand);
+    setEmbedDialogOpen(true);
+    try {
+      const res = await fetch(`/api/ty-brands/${brand.id}/embed-metadata`, { credentials: 'include' });
+      const data = await res.json();
+      setEmbedPages(data.pages || []);
+    } catch (error) {
+      console.error("Failed to load embed data:", error);
+    }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+    toast({ title: "Copied to clipboard" });
+  };
+
+  const getEmbedUrl = (brand: TyBrand) => {
+    return `${window.location.origin}/embed/ty/${brand.slug}`;
+  };
+
+  const getIframeCode = (brand: TyBrand) => {
+    const url = getEmbedUrl(brand);
+    return `<iframe src="${url}" width="100%" height="600" frameborder="0" style="border: none;"></iframe>`;
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -289,6 +335,14 @@ export default function TyBrands() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => openEmbedDialog(brand)}
+                          title="Embed"
+                        >
+                          <Code className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -560,6 +614,100 @@ export default function TyBrands() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={embedDialogOpen} onOpenChange={setEmbedDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Embed {embedBrand?.name}</DialogTitle>
+          </DialogHeader>
+          
+          {embedBrand && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Display Link</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={getEmbedUrl(embedBrand)} 
+                    readOnly 
+                    className="font-mono text-sm"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => copyToClipboard(getEmbedUrl(embedBrand), 'url')}
+                  >
+                    {copiedField === 'url' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Each page load shows the next offer in rotation
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Iframe Embed Code</Label>
+                <div className="flex gap-2">
+                  <Textarea 
+                    value={getIframeCode(embedBrand)} 
+                    readOnly 
+                    className="font-mono text-xs h-20"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => copyToClipboard(getIframeCode(embedBrand), 'iframe')}
+                  >
+                    {copiedField === 'iframe' ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Pages in Rotation ({embedPages.filter(p => p.isActive).length} active)</Label>
+                <div className="border rounded-lg max-h-48 overflow-y-auto">
+                  {embedPages.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">#</TableHead>
+                          <TableHead>Page Name</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {embedPages.map((page, index) => (
+                          <TableRow key={page.id}>
+                            <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                            <TableCell className="font-medium">{page.name}</TableCell>
+                            <TableCell>
+                              <Badge variant={page.isActive ? "default" : "secondary"}>
+                                {page.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                      No pages found. Create pages to include in the rotation.
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Manage page order and status in the "Manage Pages" section
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setEmbedDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

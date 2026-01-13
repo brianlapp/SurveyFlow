@@ -22,8 +22,12 @@ import {
   Copy,
   Eye,
   Image as ImageIcon,
-  Code
+  Code,
+  GripVertical
 } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TyBrand {
   id: string;
@@ -50,10 +54,136 @@ interface TyPage {
   buttonText: string;
   fbShareUrl: string | null;
   layoutType: string;
+  displayOrder: number;
   isActive: boolean;
   impressions: number;
   clicks: number;
   createdAt: string;
+}
+
+function SortableRow({ 
+  page, 
+  brand,
+  onPreview,
+  onEmbed,
+  onEdit,
+  onDelete,
+  onToggleStatus
+}: {
+  page: TyPage;
+  brand: TyBrand;
+  onPreview: () => void;
+  onEmbed: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleStatus: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: page.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </TableCell>
+      <TableCell>
+        {page.offerImageUrl ? (
+          <img 
+            src={page.offerImageUrl} 
+            alt={page.name} 
+            className="h-12 w-20 object-cover rounded"
+          />
+        ) : (
+          <div className="h-12 w-20 bg-muted rounded flex items-center justify-center">
+            <ImageIcon className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+      </TableCell>
+      <TableCell>
+        <div>
+          <p className="font-medium">{page.name}</p>
+          <code className="text-xs text-muted-foreground">/{page.slug}</code>
+        </div>
+      </TableCell>
+      <TableCell className="max-w-xs truncate">{page.offerTitle}</TableCell>
+      <TableCell>
+        <div className="text-sm">
+          <p>Offer: {page.tuneOfferId}</p>
+          <p className="text-muted-foreground">Aff: {page.affiliateId}</p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="text-sm">
+          <p>{page.impressions} views</p>
+          <p className="text-muted-foreground">{page.clicks} clicks</p>
+          <p className="text-green-600">
+            {page.impressions > 0 
+              ? ((page.clicks / page.impressions) * 100).toFixed(1) 
+              : 0}% CTR
+          </p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge 
+          variant={page.isActive ? "default" : "secondary"}
+          className="cursor-pointer hover:opacity-80"
+          onClick={onToggleStatus}
+        >
+          {page.isActive ? "Active" : "Inactive"}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={onPreview}
+            title="Preview"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={onEmbed}
+            title="Embed Code"
+          >
+            <Code className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={onEdit}
+            title="Edit"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={onDelete}
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 export default function TyPages() {
@@ -134,6 +264,54 @@ export default function TyPages() {
       toast({ title: "Failed to delete page", variant: "destructive" });
     },
   });
+
+  const reorderMutation = useMutation({
+    mutationFn: async (pageOrders: { id: string; displayOrder: number }[]) => {
+      return apiRequest('POST', `/api/ty-brands/${brandId}/reorder`, { pageOrders });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ty-brands', brandId, 'pages'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to reorder pages", variant: "destructive" });
+    },
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('PATCH', `/api/ty-pages/${id}/status`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ty-brands', brandId, 'pages'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to toggle status", variant: "destructive" });
+    },
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id || !pages) return;
+    
+    const oldIndex = pages.findIndex(p => p.id === active.id);
+    const newIndex = pages.findIndex(p => p.id === over.id);
+    
+    const newOrder = arrayMove(pages, oldIndex, newIndex);
+    const pageOrders = newOrder.map((page, index) => ({
+      id: page.id,
+      displayOrder: index + 1,
+    }));
+    
+    reorderMutation.mutate(pageOrders);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -247,107 +425,42 @@ export default function TyPages() {
           {pagesLoading ? (
             <div className="text-center py-8">Loading...</div>
           ) : pages && pages.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Image</TableHead>
-                  <TableHead>Page Name</TableHead>
-                  <TableHead>Offer Title</TableHead>
-                  <TableHead>Tune IDs</TableHead>
-                  <TableHead>Stats</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pages.map((page) => (
-                  <TableRow key={page.id}>
-                    <TableCell>
-                      {page.offerImageUrl ? (
-                        <img 
-                          src={page.offerImageUrl} 
-                          alt={page.name} 
-                          className="h-12 w-20 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="h-12 w-20 bg-muted rounded flex items-center justify-center">
-                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{page.name}</p>
-                        <code className="text-xs text-muted-foreground">/{page.slug}</code>
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">{page.offerTitle}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>Offer: {page.tuneOfferId}</p>
-                        <p className="text-muted-foreground">Aff: {page.affiliateId}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{page.impressions} views</p>
-                        <p className="text-muted-foreground">{page.clicks} clicks</p>
-                        <p className="text-green-600">
-                          {page.impressions > 0 
-                            ? ((page.clicks / page.impressions) * 100).toFixed(1) 
-                            : 0}% CTR
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={page.isActive ? "default" : "secondary"}>
-                        {page.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => window.open(getPageUrl(page), '_blank')}
-                          title="Preview"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => setShowEmbedCode(page.id)}
-                          title="Embed Code"
-                        >
-                          <Code className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => openEditDialog(page)}
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            if (confirm("Delete this page?")) {
-                              deleteMutation.mutate(page.id);
-                            }
-                          }}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10"></TableHead>
+                    <TableHead>Image</TableHead>
+                    <TableHead>Page Name</TableHead>
+                    <TableHead>Offer Title</TableHead>
+                    <TableHead>Tune IDs</TableHead>
+                    <TableHead>Stats</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  <SortableContext items={pages.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                    {pages.map((page) => (
+                      <SortableRow
+                        key={page.id}
+                        page={page}
+                        brand={brand}
+                        onPreview={() => window.open(getPageUrl(page), '_blank')}
+                        onEmbed={() => setShowEmbedCode(page.id)}
+                        onEdit={() => openEditDialog(page)}
+                        onDelete={() => {
+                          if (confirm("Delete this page?")) {
+                            deleteMutation.mutate(page.id);
+                          }
+                        }}
+                        onToggleStatus={() => toggleStatusMutation.mutate(page.id)}
+                      />
+                    ))}
+                  </SortableContext>
+                </TableBody>
+              </Table>
+            </DndContext>
           ) : (
             <div className="text-center py-12">
               <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

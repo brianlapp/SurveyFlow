@@ -202,6 +202,7 @@ export const tyBrands = pgTable("ty_brands", {
   termsUrl: varchar("terms_url", { length: 500 }),
   privacyUrl: varchar("privacy_url", { length: 500 }),
   isActive: boolean("is_active").default(true),
+  nextEmbedIndex: integer("next_embed_index").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -220,6 +221,7 @@ export const tyPages = pgTable("ty_pages", {
   buttonText: varchar("button_text", { length: 50 }).default('CONTINUE'),
   fbShareUrl: varchar("fb_share_url", { length: 500 }), // URL to share on Facebook
   layoutType: varchar("layout_type", { length: 20 }).default('card'), // 'card' or 'fullwidth'
+  displayOrder: integer("display_order").default(0),
   isActive: boolean("is_active").default(true),
   impressions: integer("impressions").default(0),
   clicks: integer("clicks").default(0),

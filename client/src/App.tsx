@@ -27,6 +27,7 @@ import GiveawayLanding from "@/pages/user/giveaway-landing";
 import ExitLottery from "@/pages/user/exit-lottery";
 import PublicPreview from "@/pages/public-preview";
 import TyPublic from "@/pages/ty-public";
+import TyEmbed from "@/pages/ty-embed";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/exit/:sessionId?" component={ExitLottery} />
       <Route path="/preview" component={PublicPreview} />
       <Route path="/ty/:brandSlug/:pageSlug" component={TyPublic} />
+      <Route path="/embed/ty/:brandSlug" component={TyEmbed} />
       
       {/* Authenticated admin routes */}
       {isAuthenticated && (
