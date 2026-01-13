@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,6 +113,18 @@ export default function Postbacks() {
   const { data: config, isLoading: configLoading } = useQuery<PostbackConfig>({
     queryKey: ['/api/postbacks/config'],
   });
+
+  useEffect(() => {
+    if (thresholds?.defaultThreshold) {
+      setDefaultThreshold(thresholds.defaultThreshold);
+    }
+  }, [thresholds?.defaultThreshold]);
+
+  useEffect(() => {
+    if (config?.postbackUrl !== undefined) {
+      setPostbackUrl(config.postbackUrl);
+    }
+  }, [config?.postbackUrl]);
 
   const updateConfigMutation = useMutation({
     mutationFn: async (url: string) => {
@@ -456,7 +468,7 @@ export default function Postbacks() {
                     type="number" 
                     step="0.01" 
                     className="w-32"
-                    defaultValue={thresholds?.defaultThreshold || '3.00'}
+                    value={defaultThreshold}
                     onChange={(e) => setDefaultThreshold(e.target.value)}
                   />
                   <Button 
@@ -541,7 +553,7 @@ export default function Postbacks() {
                     <Input 
                       type={showUrl ? "text" : "password"}
                       placeholder="https://yournetwork.go2cloud.org/aff_lsr?transaction_id={user_id}&amount={revenue}"
-                      defaultValue={config?.postbackUrl || ''}
+                      value={postbackUrl}
                       onChange={(e) => setPostbackUrl(e.target.value)}
                     />
                   </div>
