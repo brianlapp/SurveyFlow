@@ -11,6 +11,10 @@ import {
   giveaways,
   tyBrands,
   tyPages,
+  tySurveys,
+  tySurveyQuestions,
+  tySurveyQuestionOffers,
+  tySurveyResponses,
   type User,
   type UpsertUser,
   type EndUser,
@@ -32,6 +36,14 @@ import {
   type InsertTyBrand,
   type TyPage,
   type InsertTyPage,
+  type TySurvey,
+  type InsertTySurvey,
+  type TySurveyQuestion,
+  type InsertTySurveyQuestion,
+  type TySurveyQuestionOffer,
+  type InsertTySurveyQuestionOffer,
+  type TySurveyResponse,
+  type InsertTySurveyResponse,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, sum, count, avg } from "drizzle-orm";
@@ -126,6 +138,33 @@ export interface IStorage {
   incrementTyPageClicks(id: string): Promise<void>;
   reorderTyPages(pageOrders: { id: string; displayOrder: number }[]): Promise<void>;
   getNextEmbedPage(brandId: string): Promise<TyPage | undefined>;
+  
+  // TY Survey operations
+  createTySurvey(survey: InsertTySurvey): Promise<TySurvey>;
+  getTySurveys(): Promise<TySurvey[]>;
+  getTySurvey(id: string): Promise<TySurvey | undefined>;
+  getTySurveyBySlug(slug: string): Promise<TySurvey | undefined>;
+  updateTySurvey(id: string, data: Partial<TySurvey>): Promise<TySurvey>;
+  deleteTySurvey(id: string): Promise<void>;
+  incrementTySurveyResponses(id: string): Promise<void>;
+  
+  // TY Survey Question operations
+  createTySurveyQuestion(question: InsertTySurveyQuestion): Promise<TySurveyQuestion>;
+  getTySurveyQuestions(surveyId: string): Promise<TySurveyQuestion[]>;
+  getTySurveyQuestionsOrdered(surveyId: string): Promise<TySurveyQuestion[]>;
+  getActiveTySurveyQuestionsOrdered(surveyId: string): Promise<TySurveyQuestion[]>;
+  getTySurveyQuestion(id: string): Promise<TySurveyQuestion | undefined>;
+  updateTySurveyQuestion(id: string, data: Partial<TySurveyQuestion>): Promise<TySurveyQuestion>;
+  deleteTySurveyQuestion(id: string): Promise<void>;
+  reorderTySurveyQuestions(questionOrders: { id: string; displayOrder: number }[]): Promise<void>;
+  
+  // TY Survey Question Offer operations
+  setTySurveyQuestionOffers(questionId: string, offers: { offerId: string; displayOrder: number; displayMode: string }[]): Promise<TySurveyQuestionOffer[]>;
+  getTySurveyQuestionOffers(questionId: string): Promise<(TySurveyQuestionOffer & { offer: Offer })[]>;
+  
+  // TY Survey Response operations
+  createTySurveyResponse(response: InsertTySurveyResponse): Promise<TySurveyResponse>;
+  getTySurveyResponsesBySession(surveyId: string, sessionId: string): Promise<TySurveyResponse[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -777,6 +816,152 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tyBrands.id, brandId));
 
     return activePages[currentIndex % activePages.length];
+  }
+
+  // TY Survey operations
+  async createTySurvey(survey: InsertTySurvey): Promise<TySurvey> {
+    const [newSurvey] = await db.insert(tySurveys).values(survey).returning();
+    return newSurvey;
+  }
+
+  async getTySurveys(): Promise<TySurvey[]> {
+    return await db.select().from(tySurveys).orderBy(desc(tySurveys.createdAt));
+  }
+
+  async getTySurvey(id: string): Promise<TySurvey | undefined> {
+    const [survey] = await db.select().from(tySurveys).where(eq(tySurveys.id, id));
+    return survey;
+  }
+
+  async getTySurveyBySlug(slug: string): Promise<TySurvey | undefined> {
+    const [survey] = await db.select().from(tySurveys).where(eq(tySurveys.slug, slug));
+    return survey;
+  }
+
+  async updateTySurvey(id: string, data: Partial<TySurvey>): Promise<TySurvey> {
+    const [survey] = await db
+      .update(tySurveys)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tySurveys.id, id))
+      .returning();
+    return survey;
+  }
+
+  async deleteTySurvey(id: string): Promise<void> {
+    await db.delete(tySurveyResponses).where(eq(tySurveyResponses.surveyId, id));
+    await db.delete(tySurveys).where(eq(tySurveys.id, id));
+  }
+
+  async incrementTySurveyResponses(id: string): Promise<void> {
+    await db
+      .update(tySurveys)
+      .set({ totalResponses: sql`${tySurveys.totalResponses} + 1` })
+      .where(eq(tySurveys.id, id));
+  }
+
+  // TY Survey Question operations
+  async createTySurveyQuestion(question: InsertTySurveyQuestion): Promise<TySurveyQuestion> {
+    const [newQuestion] = await db.insert(tySurveyQuestions).values(question).returning();
+    return newQuestion;
+  }
+
+  async getTySurveyQuestions(surveyId: string): Promise<TySurveyQuestion[]> {
+    return await db
+      .select()
+      .from(tySurveyQuestions)
+      .where(eq(tySurveyQuestions.surveyId, surveyId))
+      .orderBy(desc(tySurveyQuestions.createdAt));
+  }
+
+  async getTySurveyQuestionsOrdered(surveyId: string): Promise<TySurveyQuestion[]> {
+    return await db
+      .select()
+      .from(tySurveyQuestions)
+      .where(eq(tySurveyQuestions.surveyId, surveyId))
+      .orderBy(tySurveyQuestions.displayOrder);
+  }
+
+  async getActiveTySurveyQuestionsOrdered(surveyId: string): Promise<TySurveyQuestion[]> {
+    return await db
+      .select()
+      .from(tySurveyQuestions)
+      .where(and(eq(tySurveyQuestions.surveyId, surveyId), eq(tySurveyQuestions.isActive, true)))
+      .orderBy(tySurveyQuestions.displayOrder);
+  }
+
+  async getTySurveyQuestion(id: string): Promise<TySurveyQuestion | undefined> {
+    const [question] = await db.select().from(tySurveyQuestions).where(eq(tySurveyQuestions.id, id));
+    return question;
+  }
+
+  async updateTySurveyQuestion(id: string, data: Partial<TySurveyQuestion>): Promise<TySurveyQuestion> {
+    const [question] = await db
+      .update(tySurveyQuestions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tySurveyQuestions.id, id))
+      .returning();
+    return question;
+  }
+
+  async deleteTySurveyQuestion(id: string): Promise<void> {
+    await db.delete(tySurveyQuestionOffers).where(eq(tySurveyQuestionOffers.questionId, id));
+    await db.delete(tySurveyQuestions).where(eq(tySurveyQuestions.id, id));
+  }
+
+  async reorderTySurveyQuestions(questionOrders: { id: string; displayOrder: number }[]): Promise<void> {
+    for (const { id, displayOrder } of questionOrders) {
+      await db
+        .update(tySurveyQuestions)
+        .set({ displayOrder, updatedAt: new Date() })
+        .where(eq(tySurveyQuestions.id, id));
+    }
+  }
+
+  // TY Survey Question Offer operations
+  async setTySurveyQuestionOffers(questionId: string, offersList: { offerId: string; displayOrder: number; displayMode: string }[]): Promise<TySurveyQuestionOffer[]> {
+    await db.delete(tySurveyQuestionOffers).where(eq(tySurveyQuestionOffers.questionId, questionId));
+    
+    if (offersList.length === 0) return [];
+    
+    const values = offersList.map(o => ({
+      questionId,
+      offerId: o.offerId,
+      displayOrder: o.displayOrder,
+      displayMode: o.displayMode,
+    }));
+    
+    return await db.insert(tySurveyQuestionOffers).values(values).returning();
+  }
+
+  async getTySurveyQuestionOffers(questionId: string): Promise<(TySurveyQuestionOffer & { offer: Offer })[]> {
+    const questionOffers = await db
+      .select()
+      .from(tySurveyQuestionOffers)
+      .where(eq(tySurveyQuestionOffers.questionId, questionId))
+      .orderBy(tySurveyQuestionOffers.displayOrder);
+    
+    const result = [];
+    for (const qo of questionOffers) {
+      const [offer] = await db.select().from(offers).where(eq(offers.id, qo.offerId));
+      if (offer) {
+        result.push({ ...qo, offer });
+      }
+    }
+    return result;
+  }
+
+  // TY Survey Response operations
+  async createTySurveyResponse(response: InsertTySurveyResponse): Promise<TySurveyResponse> {
+    const [newResponse] = await db.insert(tySurveyResponses).values(response).returning();
+    return newResponse;
+  }
+
+  async getTySurveyResponsesBySession(surveyId: string, sessionId: string): Promise<TySurveyResponse[]> {
+    return await db
+      .select()
+      .from(tySurveyResponses)
+      .where(and(eq(tySurveyResponses.surveyId, surveyId), eq(tySurveyResponses.sessionId, sessionId)))
+      .orderBy(tySurveyResponses.createdAt);
   }
 }
 

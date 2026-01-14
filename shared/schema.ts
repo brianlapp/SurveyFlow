@@ -286,6 +286,94 @@ export const tyPagesRelations = relations(tyPages, ({ one }) => ({
   }),
 }));
 
+// TY Surveys (branded survey containers)
+export const tySurveys = pgTable("ty_surveys", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).unique().notNull(),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  primaryColor: varchar("primary_color", { length: 20 }).default('#22c55e'),
+  headingColor: varchar("heading_color", { length: 20 }).default('#1a1a1a'),
+  fontFamily: varchar("font_family", { length: 100 }).default('Inter'),
+  thankYouTitle: varchar("thank_you_title", { length: 255 }).default('Thank you for completing the survey!'),
+  redirectUrl: varchar("redirect_url", { length: 500 }),
+  isActive: boolean("is_active").default(true),
+  totalResponses: integer("total_responses").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TY Survey Questions
+export const tySurveyQuestions = pgTable("ty_survey_questions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: uuid("survey_id").references(() => tySurveys.id, { onDelete: 'cascade' }).notNull(),
+  questionText: text("question_text").notNull(),
+  questionType: varchar("question_type", { length: 50 }).notNull(), // multiple_choice, yes_no, text_input, multiple_select
+  options: jsonb("options"), // Array of answer options for multiple choice
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  isRequired: boolean("is_required").default(true),
+  category: varchar("category", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TY Survey Question Offers (offers assigned to questions)
+export const tySurveyQuestionOffers = pgTable("ty_survey_question_offers", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: uuid("question_id").references(() => tySurveyQuestions.id, { onDelete: 'cascade' }).notNull(),
+  offerId: uuid("offer_id").references(() => offers.id, { onDelete: 'cascade' }).notNull(),
+  displayOrder: integer("display_order").default(0),
+  displayMode: varchar("display_mode", { length: 20 }).default('with_question'), // 'with_question' or 'after_question'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// TY Survey Responses (user answers)
+export const tySurveyResponses = pgTable("ty_survey_responses", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: uuid("survey_id").references(() => tySurveys.id, { onDelete: 'cascade' }).notNull(),
+  questionId: uuid("question_id").references(() => tySurveyQuestions.id, { onDelete: 'cascade' }).notNull(),
+  sessionId: varchar("session_id", { length: 100 }).notNull(),
+  answer: jsonb("answer").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// TY Survey Relations
+export const tySurveysRelations = relations(tySurveys, ({ many }) => ({
+  questions: many(tySurveyQuestions),
+  responses: many(tySurveyResponses),
+}));
+
+export const tySurveyQuestionsRelations = relations(tySurveyQuestions, ({ one, many }) => ({
+  survey: one(tySurveys, {
+    fields: [tySurveyQuestions.surveyId],
+    references: [tySurveys.id],
+  }),
+  offers: many(tySurveyQuestionOffers),
+}));
+
+export const tySurveyQuestionOffersRelations = relations(tySurveyQuestionOffers, ({ one }) => ({
+  question: one(tySurveyQuestions, {
+    fields: [tySurveyQuestionOffers.questionId],
+    references: [tySurveyQuestions.id],
+  }),
+  offer: one(offers, {
+    fields: [tySurveyQuestionOffers.offerId],
+    references: [offers.id],
+  }),
+}));
+
+export const tySurveyResponsesRelations = relations(tySurveyResponses, ({ one }) => ({
+  survey: one(tySurveys, {
+    fields: [tySurveyResponses.surveyId],
+    references: [tySurveys.id],
+  }),
+  question: one(tySurveyQuestions, {
+    fields: [tySurveyResponses.questionId],
+    references: [tySurveyQuestions.id],
+  }),
+}));
+
 // Insert schemas
 export const insertEndUserSchema = createInsertSchema(endUsers).omit({
   id: true,
@@ -364,3 +452,37 @@ export type TyBrand = typeof tyBrands.$inferSelect;
 export type InsertTyBrand = z.infer<typeof insertTyBrandSchema>;
 export type TyPage = typeof tyPages.$inferSelect;
 export type InsertTyPage = z.infer<typeof insertTyPageSchema>;
+
+// TY Survey schemas
+export const insertTySurveySchema = createInsertSchema(tySurveys).omit({
+  id: true,
+  totalResponses: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTySurveyQuestionSchema = createInsertSchema(tySurveyQuestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTySurveyQuestionOfferSchema = createInsertSchema(tySurveyQuestionOffers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTySurveyResponseSchema = createInsertSchema(tySurveyResponses).omit({
+  id: true,
+  createdAt: true,
+});
+
+// TY Survey types
+export type TySurvey = typeof tySurveys.$inferSelect;
+export type InsertTySurvey = z.infer<typeof insertTySurveySchema>;
+export type TySurveyQuestion = typeof tySurveyQuestions.$inferSelect;
+export type InsertTySurveyQuestion = z.infer<typeof insertTySurveyQuestionSchema>;
+export type TySurveyQuestionOffer = typeof tySurveyQuestionOffers.$inferSelect;
+export type InsertTySurveyQuestionOffer = z.infer<typeof insertTySurveyQuestionOfferSchema>;
+export type TySurveyResponse = typeof tySurveyResponses.$inferSelect;
+export type InsertTySurveyResponse = z.infer<typeof insertTySurveyResponseSchema>;

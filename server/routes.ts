@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEndUserSchema, insertQuestionSchema, insertOfferSchema, insertResponseSchema } from "@shared/schema";
+import { insertEndUserSchema, insertQuestionSchema, insertOfferSchema, insertResponseSchema, insertTySurveySchema, insertTySurveyQuestionSchema, insertTySurveyQuestionOfferSchema } from "@shared/schema";
 import { tuneApi } from "./services/tuneApi";
 import { revenueTracker } from "./services/revenueTracker";
 import { openaiService } from "./services/openaiService";
@@ -1506,6 +1506,373 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error tracking embed click:", error);
       res.status(500).json({ message: "Failed to track click" });
+    }
+  });
+
+  // ============ TY SURVEYS API ============
+  
+  // Get all surveys
+  app.get('/api/ty-surveys', isAuthenticated, async (req, res) => {
+    try {
+      const surveys = await storage.getTySurveys();
+      res.json(surveys);
+    } catch (error) {
+      console.error("Error fetching surveys:", error);
+      res.status(500).json({ message: "Failed to fetch surveys" });
+    }
+  });
+
+  // Create new survey
+  app.post('/api/ty-surveys', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertTySurveySchema.parse(req.body);
+      const survey = await storage.createTySurvey(validatedData);
+      res.json(survey);
+    } catch (error: any) {
+      console.error("Error creating survey:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid survey data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create survey" });
+    }
+  });
+
+  // Get single survey
+  app.get('/api/ty-surveys/:id', isAuthenticated, async (req, res) => {
+    try {
+      const survey = await storage.getTySurvey(req.params.id);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      res.json(survey);
+    } catch (error) {
+      console.error("Error fetching survey:", error);
+      res.status(500).json({ message: "Failed to fetch survey" });
+    }
+  });
+
+  // Update survey
+  app.put('/api/ty-surveys/:id', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertTySurveySchema.partial().parse(req.body);
+      const survey = await storage.updateTySurvey(req.params.id, validatedData);
+      res.json(survey);
+    } catch (error: any) {
+      console.error("Error updating survey:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid survey data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update survey" });
+    }
+  });
+
+  // Delete survey
+  app.delete('/api/ty-surveys/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteTySurvey(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting survey:", error);
+      res.status(500).json({ message: "Failed to delete survey" });
+    }
+  });
+
+  // Get survey questions
+  app.get('/api/ty-surveys/:surveyId/questions', isAuthenticated, async (req, res) => {
+    try {
+      const questions = await storage.getTySurveyQuestionsOrdered(req.params.surveyId);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      res.status(500).json({ message: "Failed to fetch questions" });
+    }
+  });
+
+  // Create survey question
+  app.post('/api/ty-surveys/:surveyId/questions', isAuthenticated, async (req, res) => {
+    try {
+      const existingQuestions = await storage.getTySurveyQuestionsOrdered(req.params.surveyId);
+      const maxOrder = existingQuestions.length > 0 
+        ? Math.max(...existingQuestions.map(q => q.displayOrder || 0)) 
+        : -1;
+      
+      const questionData = {
+        ...req.body,
+        surveyId: req.params.surveyId,
+        displayOrder: maxOrder + 1,
+      };
+      const validatedData = insertTySurveyQuestionSchema.parse(questionData);
+      const question = await storage.createTySurveyQuestion(validatedData);
+      res.json(question);
+    } catch (error: any) {
+      console.error("Error creating question:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid question data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create question" });
+    }
+  });
+
+  // Update survey question
+  app.put('/api/ty-survey-questions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertTySurveyQuestionSchema.partial().parse(req.body);
+      const question = await storage.updateTySurveyQuestion(req.params.id, validatedData);
+      res.json(question);
+    } catch (error: any) {
+      console.error("Error updating question:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid question data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update question" });
+    }
+  });
+
+  // Delete survey question
+  app.delete('/api/ty-survey-questions/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteTySurveyQuestion(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting question:", error);
+      res.status(500).json({ message: "Failed to delete question" });
+    }
+  });
+
+  // Toggle question status
+  app.patch('/api/ty-survey-questions/:id/status', isAuthenticated, async (req, res) => {
+    try {
+      const question = await storage.getTySurveyQuestion(req.params.id);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      const updated = await storage.updateTySurveyQuestion(req.params.id, { 
+        isActive: !question.isActive 
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error toggling question status:", error);
+      res.status(500).json({ message: "Failed to toggle status" });
+    }
+  });
+
+  // Reorder survey questions
+  app.post('/api/ty-surveys/:surveyId/questions/reorder', isAuthenticated, async (req, res) => {
+    try {
+      const { questionOrders } = req.body;
+      await storage.reorderTySurveyQuestions(questionOrders);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering questions:", error);
+      res.status(500).json({ message: "Failed to reorder questions" });
+    }
+  });
+
+  // Get question offers
+  app.get('/api/ty-survey-questions/:questionId/offers', isAuthenticated, async (req, res) => {
+    try {
+      const offers = await storage.getTySurveyQuestionOffers(req.params.questionId);
+      res.json(offers);
+    } catch (error) {
+      console.error("Error fetching question offers:", error);
+      res.status(500).json({ message: "Failed to fetch offers" });
+    }
+  });
+
+  // Set question offers
+  app.put('/api/ty-survey-questions/:questionId/offers', isAuthenticated, async (req, res) => {
+    try {
+      const offerSchema = z.object({
+        offerId: z.string().uuid(),
+        displayMode: z.enum(['with_question', 'after_question']).optional().default('with_question'),
+        displayOrder: z.number().int().min(0).optional().default(0),
+      });
+      const requestSchema = z.object({
+        offers: z.array(offerSchema),
+      });
+      const validatedData = requestSchema.parse(req.body);
+      const result = await storage.setTySurveyQuestionOffers(req.params.questionId, validatedData.offers);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error setting question offers:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid offers data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to set offers" });
+    }
+  });
+
+  // AI Generate questions
+  app.post('/api/ty-surveys/:surveyId/generate-questions', isAuthenticated, async (req, res) => {
+    try {
+      const { topic, count = 5 } = req.body;
+      
+      if (!topic) {
+        return res.status(400).json({ message: "Topic is required" });
+      }
+
+      const openai = new OpenAI();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a survey question generator. Generate engaging survey questions that would be relevant for lead generation and user profiling. Return a JSON array of questions.`
+          },
+          {
+            role: "user",
+            content: `Generate ${count} survey questions about "${topic}". 
+            
+Return a JSON array with this format:
+[
+  {
+    "questionText": "The question text",
+    "questionType": "multiple_choice" or "yes_no" or "text_input",
+    "options": ["Option 1", "Option 2", "Option 3"] // only for multiple_choice, null otherwise
+  }
+]
+
+Make questions engaging and relevant for consumer surveys. Include a mix of question types.`
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({ message: "Failed to generate questions" });
+      }
+
+      const parsed = JSON.parse(content);
+      const questions = parsed.questions || parsed;
+      
+      res.json({ questions });
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      res.status(500).json({ message: "Failed to generate questions" });
+    }
+  });
+
+  // Add generated questions to survey
+  app.post('/api/ty-surveys/:surveyId/add-generated', isAuthenticated, async (req, res) => {
+    try {
+      const { questions } = req.body;
+      const surveyId = req.params.surveyId;
+      
+      const existingQuestions = await storage.getTySurveyQuestionsOrdered(surveyId);
+      let maxOrder = existingQuestions.length > 0 
+        ? Math.max(...existingQuestions.map(q => q.displayOrder || 0)) 
+        : -1;
+      
+      const created = [];
+      for (const q of questions) {
+        maxOrder++;
+        const question = await storage.createTySurveyQuestion({
+          surveyId,
+          questionText: q.questionText,
+          questionType: q.questionType,
+          options: q.options,
+          displayOrder: maxOrder,
+          isActive: true,
+          isRequired: true,
+        });
+        created.push(question);
+      }
+      
+      res.json(created);
+    } catch (error) {
+      console.error("Error adding generated questions:", error);
+      res.status(500).json({ message: "Failed to add questions" });
+    }
+  });
+
+  // ============ PUBLIC SURVEY API ============
+  
+  // Get public survey data
+  app.get('/api/public/survey/:surveySlug', async (req, res) => {
+    try {
+      const survey = await storage.getTySurveyBySlug(req.params.surveySlug);
+      if (!survey || !survey.isActive) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      const questions = await storage.getActiveTySurveyQuestionsOrdered(survey.id);
+      
+      // Get offers for each question
+      const questionsWithOffers = await Promise.all(questions.map(async (q) => {
+        const questionOffers = await storage.getTySurveyQuestionOffers(q.id);
+        return {
+          ...q,
+          offers: questionOffers.map(qo => ({
+            ...qo.offer,
+            displayMode: qo.displayMode,
+            displayOrder: qo.displayOrder,
+          }))
+        };
+      }));
+      
+      res.json({
+        survey: {
+          id: survey.id,
+          name: survey.name,
+          slug: survey.slug,
+          logoUrl: survey.logoUrl,
+          primaryColor: survey.primaryColor,
+          headingColor: survey.headingColor,
+          fontFamily: survey.fontFamily,
+          thankYouTitle: survey.thankYouTitle,
+          redirectUrl: survey.redirectUrl,
+        },
+        questions: questionsWithOffers,
+      });
+    } catch (error) {
+      console.error("Error fetching public survey:", error);
+      res.status(500).json({ message: "Failed to fetch survey" });
+    }
+  });
+
+  // Submit survey response
+  app.post('/api/public/survey/:surveySlug/respond', async (req, res) => {
+    try {
+      const { sessionId, questionId, answer } = req.body;
+      
+      const survey = await storage.getTySurveyBySlug(req.params.surveySlug);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      await storage.createTySurveyResponse({
+        surveyId: survey.id,
+        questionId,
+        sessionId,
+        answer,
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving response:", error);
+      res.status(500).json({ message: "Failed to save response" });
+    }
+  });
+
+  // Mark survey complete
+  app.post('/api/public/survey/:surveySlug/complete', async (req, res) => {
+    try {
+      const survey = await storage.getTySurveyBySlug(req.params.surveySlug);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      await storage.incrementTySurveyResponses(survey.id);
+      
+      res.json({ 
+        success: true,
+        redirectUrl: survey.redirectUrl,
+        thankYouTitle: survey.thankYouTitle,
+      });
+    } catch (error) {
+      console.error("Error completing survey:", error);
+      res.status(500).json({ message: "Failed to complete survey" });
     }
   });
 

@@ -21,6 +21,8 @@ import Documentation from "@/pages/admin/documentation";
 import Postbacks from "@/pages/admin/postbacks";
 import TyBrands from "@/pages/admin/ty-brands";
 import TyPages from "@/pages/admin/ty-pages";
+import TySurveys from "@/pages/admin/ty-surveys";
+import TySurveyQuestions from "@/pages/admin/ty-survey-questions";
 import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
@@ -28,6 +30,7 @@ import ExitLottery from "@/pages/user/exit-lottery";
 import PublicPreview from "@/pages/public-preview";
 import TyPublic from "@/pages/ty-public";
 import TyEmbed from "@/pages/ty-embed";
+import TySurveyPublic from "@/pages/ty-survey-public";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -56,6 +59,7 @@ function Router() {
       <Route path="/preview" component={PublicPreview} />
       <Route path="/ty/:brandSlug/:pageSlug" component={TyPublic} />
       <Route path="/embed/ty/:brandSlug" component={TyEmbed} />
+      <Route path="/s/:surveySlug" component={TySurveyPublic} />
       
       {/* Authenticated admin routes */}
       {isAuthenticated && (
@@ -76,6 +80,8 @@ function Router() {
             <Route path="/admin/postbacks" component={Postbacks} />
             <Route path="/admin/ty-brands" component={TyBrands} />
             <Route path="/admin/ty-brands/:brandId/pages" component={TyPages} />
+            <Route path="/admin/ty-surveys" component={TySurveys} />
+            <Route path="/admin/ty-surveys/:surveyId/questions" component={TySurveyQuestions} />
             <Route component={NotFound} />
           </Switch>
         </AdminLayout>
