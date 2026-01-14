@@ -122,6 +122,15 @@ function SortableRow({ question, onEdit, onDelete, onToggleStatus, onAssignOffer
         </Badge>
       </TableCell>
       <TableCell>
+        {question.category ? (
+          <Badge variant="secondary" className="capitalize">
+            {question.category}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        )}
+      </TableCell>
+      <TableCell>
         <Badge 
           variant={question.isActive ? "default" : "secondary"}
           className="cursor-pointer"
@@ -574,6 +583,7 @@ export default function TySurveyQuestions() {
                     <TableHead className="w-10"></TableHead>
                     <TableHead>Question</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
