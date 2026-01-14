@@ -364,8 +364,10 @@ export default function TySurveys() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Logo</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Slug</TableHead>
+                  <TableHead>Font</TableHead>
                   <TableHead>Responses</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -374,8 +376,22 @@ export default function TySurveys() {
               <TableBody>
                 {surveys.map((survey) => (
                   <TableRow key={survey.id}>
+                    <TableCell>
+                      {survey.logoUrl ? (
+                        <img 
+                          src={survey.logoUrl} 
+                          alt={survey.name} 
+                          className="h-8 max-w-[100px] object-contain"
+                        />
+                      ) : (
+                        <div className="h-8 w-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+                          No logo
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{survey.name}</TableCell>
                     <TableCell className="text-muted-foreground">/s/{survey.slug}</TableCell>
+                    <TableCell className="text-muted-foreground">{survey.fontFamily}</TableCell>
                     <TableCell>{survey.totalResponses || 0}</TableCell>
                     <TableCell>
                       <Badge variant={survey.isActive ? "default" : "secondary"}>
