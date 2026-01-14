@@ -4,7 +4,10 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (January 13, 2026)
+## Latest Updates (January 14, 2026)
+- **TY Surveys System**: New branded survey system at `/admin/ty-surveys` for creating custom survey flows with offer integration. Features include: survey branding (logo, colors, fonts, thank you message), question management with drag-drop reordering, dual offer display modes (with_question - shows alongside question, after_question - interstitial between questions), AI question generation via GPT-4o, and public survey flow at `/s/{survey-slug}`. Database: ty_surveys, ty_survey_questions, ty_survey_question_offers, ty_survey_responses. Admin sidebar updated with TY Surveys link. All API endpoints include Zod validation.
+
+## Previous Updates (January 13, 2026)
 - **Brand-Level Embed with Round-Robin Rotation**: New embeddable offer system at `/embed/ty/{brand-slug}` provides rotating offers across active pages. Features include: brand-level nextEmbedIndex cursor for server-side round-robin cycling, page-level displayOrder for sequence control, and isActive toggle for visibility management. Admin UI in TY Brands page includes Embed dialog with copyable display link/iframe code. TY Pages admin features drag-and-drop reordering via @dnd-kit and clickable Active/Inactive status badges.
 - **Thank You Page Manager**: New admin feature at `/admin/ty-brands` for creating branded post-conversion offer pages. Supports brand management (logo, font family, primary color, navigation items for FB compliance) and page management per brand (offer title, image, Tune offer ID + affiliate ID, button text). Public pages render at `/ty/{brand-slug}/{page-slug}` with mobile-first design, hamburger navigation, impression pixel firing, and click tracking. Includes embed code generator for iframe embedding on external sites. Database tables: ty_brands, ty_pages with impression/click metrics.
 - **Postback Management Page**: New admin page at `/admin/postbacks` for comprehensive affiliate postback management. Features include: postback history table with status filtering (success/failed/pending), statistics dashboard (total postbacks, success rate, revenue posted, pending count), pending users monitor showing users at 80%+ of threshold with manual trigger capability, threshold configuration (default $3.00 threshold plus source-specific overrides), and Tune postback URL configuration with show/hide toggle. APIs: GET/PUT /api/postbacks/config, GET /api/postbacks/stats, GET /api/postbacks/pending-users, CRUD for thresholds.
@@ -63,6 +66,7 @@ Preferred communication style: Simple, everyday language.
 - **Responses Table**: User survey responses with question-answer mapping
 - **Revenue Tracking**: Offer interactions, postbacks, and daily statistics tables
 - **TY Brands/Pages**: Branded thank you page templates with inherited settings and per-page offer configuration
+- **TY Surveys**: Custom survey flows with branding, question management, offer assignments, and response tracking
 
 ## Revenue System
 - **Smart Postback Logic**: Tracks cumulative revenue per user and fires affiliate postbacks only after reaching $3.00 threshold
