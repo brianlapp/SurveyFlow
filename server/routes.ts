@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEndUserSchema, insertQuestionSchema, insertOfferSchema, insertResponseSchema, insertTySurveySchema, insertTySurveyQuestionSchema, insertTySurveyQuestionOfferSchema } from "@shared/schema";
+import { insertEndUserSchema, insertQuestionSchema, insertOfferSchema, insertResponseSchema, insertTySurveySchema, insertTySurveyQuestionSchema, insertTySurveyQuestionOfferSchema, insertEmailListSchema, insertEmailAdSchema } from "@shared/schema";
 import { tuneApi } from "./services/tuneApi";
 import { revenueTracker } from "./services/revenueTracker";
 import { openaiService } from "./services/openaiService";
@@ -1873,6 +1873,309 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
     } catch (error) {
       console.error("Error completing survey:", error);
       res.status(500).json({ message: "Failed to complete survey" });
+    }
+  });
+
+  // ============ EMAIL HOUSE ADS API ============
+
+  // Get all email lists
+  app.get('/api/email-lists', isAuthenticated, async (req, res) => {
+    try {
+      const lists = await storage.getEmailLists();
+      res.json(lists);
+    } catch (error) {
+      console.error("Error fetching email lists:", error);
+      res.status(500).json({ message: "Failed to fetch email lists" });
+    }
+  });
+
+  // Create new email list
+  app.post('/api/email-lists', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertEmailListSchema.parse(req.body);
+      const list = await storage.createEmailList(validatedData);
+      res.json(list);
+    } catch (error: any) {
+      console.error("Error creating email list:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid list data", errors: error.errors });
+      }
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "A list with this slug already exists" });
+      }
+      res.status(500).json({ message: "Failed to create email list" });
+    }
+  });
+
+  // Get single email list
+  app.get('/api/email-lists/:id', isAuthenticated, async (req, res) => {
+    try {
+      const list = await storage.getEmailList(req.params.id);
+      if (!list) {
+        return res.status(404).json({ message: "Email list not found" });
+      }
+      res.json(list);
+    } catch (error) {
+      console.error("Error fetching email list:", error);
+      res.status(500).json({ message: "Failed to fetch email list" });
+    }
+  });
+
+  // Update email list
+  app.put('/api/email-lists/:id', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertEmailListSchema.partial().parse(req.body);
+      const list = await storage.updateEmailList(req.params.id, validatedData);
+      res.json(list);
+    } catch (error: any) {
+      console.error("Error updating email list:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid list data", errors: error.errors });
+      }
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "A list with this slug already exists" });
+      }
+      res.status(500).json({ message: "Failed to update email list" });
+    }
+  });
+
+  // Delete email list
+  app.delete('/api/email-lists/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteEmailList(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting email list:", error);
+      res.status(500).json({ message: "Failed to delete email list" });
+    }
+  });
+
+  // Get email ads for a list
+  app.get('/api/email-lists/:listId/ads', isAuthenticated, async (req, res) => {
+    try {
+      const ads = await storage.getEmailAdsByListOrdered(req.params.listId);
+      res.json(ads);
+    } catch (error) {
+      console.error("Error fetching email ads:", error);
+      res.status(500).json({ message: "Failed to fetch email ads" });
+    }
+  });
+
+  // Create email ad
+  app.post('/api/email-lists/:listId/ads', isAuthenticated, async (req, res) => {
+    try {
+      const existingAds = await storage.getEmailAdsByListOrdered(req.params.listId);
+      const maxOrder = existingAds.length > 0 
+        ? Math.max(...existingAds.map(a => a.displayOrder || 0)) 
+        : -1;
+      
+      const adData = {
+        ...req.body,
+        listId: req.params.listId,
+        displayOrder: maxOrder + 1,
+      };
+      
+      const validatedData = insertEmailAdSchema.parse(adData);
+      const ad = await storage.createEmailAd(validatedData);
+      res.json(ad);
+    } catch (error: any) {
+      console.error("Error creating email ad:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid ad data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create email ad" });
+    }
+  });
+
+  // Update email ad
+  app.put('/api/email-lists/:listId/ads/:adId', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertEmailAdSchema.partial().parse(req.body);
+      const ad = await storage.updateEmailAd(req.params.adId, validatedData);
+      res.json(ad);
+    } catch (error: any) {
+      console.error("Error updating email ad:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid ad data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update email ad" });
+    }
+  });
+
+  // Delete email ad
+  app.delete('/api/email-lists/:listId/ads/:adId', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteEmailAd(req.params.adId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting email ad:", error);
+      res.status(500).json({ message: "Failed to delete email ad" });
+    }
+  });
+
+  // Reorder email ads
+  app.post('/api/email-lists/:listId/reorder', isAuthenticated, async (req, res) => {
+    try {
+      const { adOrders } = req.body;
+      if (!Array.isArray(adOrders)) {
+        return res.status(400).json({ message: "adOrders must be an array" });
+      }
+      await storage.reorderEmailAds(adOrders);
+      const ads = await storage.getEmailAdsByListOrdered(req.params.listId);
+      res.json({ ads });
+    } catch (error) {
+      console.error("Error reordering email ads:", error);
+      res.status(500).json({ message: "Failed to reorder email ads" });
+    }
+  });
+
+  // Get embed metadata for email list
+  app.get('/api/email-lists/:listId/embed-metadata', isAuthenticated, async (req, res) => {
+    try {
+      const list = await storage.getEmailList(req.params.listId);
+      if (!list) {
+        return res.status(404).json({ message: "Email list not found" });
+      }
+      const ads = await storage.getEmailAdsByListOrdered(req.params.listId);
+      res.json({ list, ads });
+    } catch (error) {
+      console.error("Error fetching embed metadata:", error);
+      res.status(500).json({ message: "Failed to fetch embed metadata" });
+    }
+  });
+
+  // ============ PUBLIC EMAIL AD ENDPOINTS ============
+
+  // Serve rotating ad image (tracks impression)
+  app.get('/api/email/ad.png', async (req, res) => {
+    try {
+      const { property, send, sub, sub1, esp, w, h } = req.query;
+      
+      if (!property) {
+        return res.status(400).send('Missing property parameter');
+      }
+      
+      const list = await storage.getEmailListBySlug(property as string);
+      if (!list || !list.isActive) {
+        return res.status(404).send('List not found');
+      }
+      
+      const ad = await storage.getNextRotatingEmailAd(list.id);
+      if (!ad) {
+        return res.status(404).send('No active ads');
+      }
+      
+      // Track impression
+      await storage.incrementEmailAdImpressions(ad.id);
+      await storage.recordEmailAdImpression({
+        adId: ad.id,
+        listId: list.id,
+        sendId: send as string,
+        sub: sub as string,
+        sub1: sub1 as string,
+        esp: esp as string,
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      });
+      
+      // Redirect to the ad image with cache-busting
+      const imageUrl = ad.imageUrl.includes('?') 
+        ? `${ad.imageUrl}&cb=${Date.now()}` 
+        : `${ad.imageUrl}?cb=${Date.now()}`;
+      
+      res.redirect(302, imageUrl);
+    } catch (error) {
+      console.error("Error serving email ad:", error);
+      res.status(500).send('Error');
+    }
+  });
+
+  // Track click and redirect to offer
+  app.get('/api/email/click', async (req, res) => {
+    try {
+      const { property, send, sub, sub1, esp, ad: adId } = req.query;
+      
+      if (!property) {
+        return res.status(400).send('Missing property parameter');
+      }
+      
+      const list = await storage.getEmailListBySlug(property as string);
+      if (!list) {
+        return res.status(404).send('List not found');
+      }
+      
+      let ad;
+      if (adId) {
+        ad = await storage.getEmailAd(adId as string);
+      }
+      
+      if (!ad) {
+        ad = await storage.getNextRotatingEmailAd(list.id);
+      }
+      
+      if (!ad) {
+        return res.status(404).send('No active ads');
+      }
+      
+      // Track click
+      await storage.incrementEmailAdClicks(ad.id);
+      await storage.recordEmailAdClick({
+        adId: ad.id,
+        listId: list.id,
+        sendId: send as string,
+        sub: sub as string,
+        sub1: sub1 as string,
+        esp: esp as string,
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      });
+      
+      // Build Tune click URL with sub parameters
+      const trackingDomain = ad.trackingDomain || 'track.modemobile.com';
+      let clickUrl = `https://${trackingDomain}/aff_c?offer_id=${ad.tuneOfferId}&aff_id=${ad.affiliateId}`;
+      
+      if (sub) clickUrl += `&aff_sub=${encodeURIComponent(sub as string)}`;
+      if (sub1) clickUrl += `&aff_sub2=${encodeURIComponent(sub1 as string)}`;
+      if (send) clickUrl += `&aff_sub3=${encodeURIComponent(send as string)}`;
+      if (esp) clickUrl += `&aff_sub4=${encodeURIComponent(esp as string)}`;
+      
+      res.redirect(302, clickUrl);
+    } catch (error) {
+      console.error("Error tracking email click:", error);
+      res.status(500).send('Error');
+    }
+  });
+
+  // Get current rotating ad data (for dynamic email rendering)
+  app.get('/api/email/ad/:listSlug', async (req, res) => {
+    try {
+      const list = await storage.getEmailListBySlug(req.params.listSlug);
+      if (!list || !list.isActive) {
+        return res.status(404).json({ message: "List not found" });
+      }
+      
+      const ad = await storage.getNextRotatingEmailAd(list.id);
+      if (!ad) {
+        return res.status(404).json({ message: "No active ads" });
+      }
+      
+      // Track impression
+      await storage.incrementEmailAdImpressions(ad.id);
+      
+      const trackingDomain = ad.trackingDomain || 'track.modemobile.com';
+      const clickUrl = `https://${trackingDomain}/aff_c?offer_id=${ad.tuneOfferId}&aff_id=${ad.affiliateId}`;
+      
+      res.json({
+        id: ad.id,
+        title: ad.title,
+        imageUrl: ad.imageUrl,
+        buttonText: ad.buttonText,
+        clickUrl,
+        listSlug: list.slug,
+      });
+    } catch (error) {
+      console.error("Error fetching email ad:", error);
+      res.status(500).json({ message: "Failed to fetch ad" });
     }
   });
 

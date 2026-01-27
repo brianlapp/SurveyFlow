@@ -15,6 +15,10 @@ import {
   tySurveyQuestions,
   tySurveyQuestionOffers,
   tySurveyResponses,
+  emailLists,
+  emailAds,
+  emailAdImpressions,
+  emailAdClicks,
   type User,
   type UpsertUser,
   type EndUser,
@@ -44,6 +48,12 @@ import {
   type InsertTySurveyQuestionOffer,
   type TySurveyResponse,
   type InsertTySurveyResponse,
+  type EmailList,
+  type InsertEmailList,
+  type EmailAd,
+  type InsertEmailAd,
+  type EmailAdImpression,
+  type EmailAdClick,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, sum, count, avg } from "drizzle-orm";
@@ -165,6 +175,31 @@ export interface IStorage {
   // TY Survey Response operations
   createTySurveyResponse(response: InsertTySurveyResponse): Promise<TySurveyResponse>;
   getTySurveyResponsesBySession(surveyId: string, sessionId: string): Promise<TySurveyResponse[]>;
+  
+  // Email List operations
+  createEmailList(list: InsertEmailList): Promise<EmailList>;
+  getEmailLists(): Promise<EmailList[]>;
+  getEmailList(id: string): Promise<EmailList | undefined>;
+  getEmailListBySlug(slug: string): Promise<EmailList | undefined>;
+  updateEmailList(id: string, data: Partial<EmailList>): Promise<EmailList>;
+  deleteEmailList(id: string): Promise<void>;
+  
+  // Email Ad operations
+  createEmailAd(ad: InsertEmailAd): Promise<EmailAd>;
+  getEmailAdsByList(listId: string): Promise<EmailAd[]>;
+  getEmailAdsByListOrdered(listId: string): Promise<EmailAd[]>;
+  getActiveEmailAdsByListOrdered(listId: string): Promise<EmailAd[]>;
+  getEmailAd(id: string): Promise<EmailAd | undefined>;
+  updateEmailAd(id: string, data: Partial<EmailAd>): Promise<EmailAd>;
+  deleteEmailAd(id: string): Promise<void>;
+  reorderEmailAds(adOrders: { id: string; displayOrder: number }[]): Promise<void>;
+  incrementEmailAdImpressions(id: string): Promise<void>;
+  incrementEmailAdClicks(id: string): Promise<void>;
+  getNextRotatingEmailAd(listId: string): Promise<EmailAd | undefined>;
+  
+  // Email Ad Tracking operations
+  recordEmailAdImpression(data: { adId: string; listId: string; sendId?: string; sub?: string; sub1?: string; esp?: string; ipAddress?: string; userAgent?: string }): Promise<EmailAdImpression>;
+  recordEmailAdClick(data: { adId: string; listId: string; sendId?: string; sub?: string; sub1?: string; esp?: string; ipAddress?: string; userAgent?: string }): Promise<EmailAdClick>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -962,6 +997,143 @@ export class DatabaseStorage implements IStorage {
       .from(tySurveyResponses)
       .where(and(eq(tySurveyResponses.surveyId, surveyId), eq(tySurveyResponses.sessionId, sessionId)))
       .orderBy(tySurveyResponses.createdAt);
+  }
+
+  // Email List operations
+  async createEmailList(list: InsertEmailList): Promise<EmailList> {
+    const [newList] = await db.insert(emailLists).values(list).returning();
+    return newList;
+  }
+
+  async getEmailLists(): Promise<EmailList[]> {
+    return await db.select().from(emailLists).orderBy(desc(emailLists.createdAt));
+  }
+
+  async getEmailList(id: string): Promise<EmailList | undefined> {
+    const [list] = await db.select().from(emailLists).where(eq(emailLists.id, id));
+    return list;
+  }
+
+  async getEmailListBySlug(slug: string): Promise<EmailList | undefined> {
+    const [list] = await db.select().from(emailLists).where(eq(emailLists.slug, slug));
+    return list;
+  }
+
+  async updateEmailList(id: string, data: Partial<EmailList>): Promise<EmailList> {
+    const [list] = await db
+      .update(emailLists)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(emailLists.id, id))
+      .returning();
+    return list;
+  }
+
+  async deleteEmailList(id: string): Promise<void> {
+    await db.delete(emailAds).where(eq(emailAds.listId, id));
+    await db.delete(emailLists).where(eq(emailLists.id, id));
+  }
+
+  // Email Ad operations
+  async createEmailAd(ad: InsertEmailAd): Promise<EmailAd> {
+    const [newAd] = await db.insert(emailAds).values(ad).returning();
+    return newAd;
+  }
+
+  async getEmailAdsByList(listId: string): Promise<EmailAd[]> {
+    return await db.select().from(emailAds).where(eq(emailAds.listId, listId));
+  }
+
+  async getEmailAdsByListOrdered(listId: string): Promise<EmailAd[]> {
+    return await db
+      .select()
+      .from(emailAds)
+      .where(eq(emailAds.listId, listId))
+      .orderBy(emailAds.displayOrder);
+  }
+
+  async getActiveEmailAdsByListOrdered(listId: string): Promise<EmailAd[]> {
+    return await db
+      .select()
+      .from(emailAds)
+      .where(and(eq(emailAds.listId, listId), eq(emailAds.isActive, true)))
+      .orderBy(emailAds.displayOrder);
+  }
+
+  async getEmailAd(id: string): Promise<EmailAd | undefined> {
+    const [ad] = await db.select().from(emailAds).where(eq(emailAds.id, id));
+    return ad;
+  }
+
+  async updateEmailAd(id: string, data: Partial<EmailAd>): Promise<EmailAd> {
+    const [ad] = await db
+      .update(emailAds)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(emailAds.id, id))
+      .returning();
+    return ad;
+  }
+
+  async deleteEmailAd(id: string): Promise<void> {
+    await db.delete(emailAds).where(eq(emailAds.id, id));
+  }
+
+  async reorderEmailAds(adOrders: { id: string; displayOrder: number }[]): Promise<void> {
+    for (const { id, displayOrder } of adOrders) {
+      await db
+        .update(emailAds)
+        .set({ displayOrder, updatedAt: new Date() })
+        .where(eq(emailAds.id, id));
+    }
+  }
+
+  async incrementEmailAdImpressions(id: string): Promise<void> {
+    await db
+      .update(emailAds)
+      .set({ impressions: sql`${emailAds.impressions} + 1` })
+      .where(eq(emailAds.id, id));
+  }
+
+  async incrementEmailAdClicks(id: string): Promise<void> {
+    await db
+      .update(emailAds)
+      .set({ clicks: sql`${emailAds.clicks} + 1` })
+      .where(eq(emailAds.id, id));
+  }
+
+  async getNextRotatingEmailAd(listId: string): Promise<EmailAd | undefined> {
+    const list = await this.getEmailList(listId);
+    if (!list) return undefined;
+
+    const activeAds = await this.getActiveEmailAdsByListOrdered(listId);
+    if (activeAds.length === 0) return undefined;
+
+    const currentIndex = list.nextAdIndex || 0;
+    const ad = activeAds[currentIndex % activeAds.length];
+
+    await db
+      .update(emailLists)
+      .set({ 
+        nextAdIndex: (currentIndex + 1) % activeAds.length,
+        totalImpressions: sql`${emailLists.totalImpressions} + 1`
+      })
+      .where(eq(emailLists.id, listId));
+
+    return ad;
+  }
+
+  // Email Ad Tracking operations
+  async recordEmailAdImpression(data: { adId: string; listId: string; sendId?: string; sub?: string; sub1?: string; esp?: string; ipAddress?: string; userAgent?: string }): Promise<EmailAdImpression> {
+    const [impression] = await db.insert(emailAdImpressions).values(data).returning();
+    return impression;
+  }
+
+  async recordEmailAdClick(data: { adId: string; listId: string; sendId?: string; sub?: string; sub1?: string; esp?: string; ipAddress?: string; userAgent?: string }): Promise<EmailAdClick> {
+    const [click] = await db.insert(emailAdClicks).values(data).returning();
+    await db
+      .update(emailLists)
+      .set({ totalClicks: sql`${emailLists.totalClicks} + 1` })
+      .where(eq(emailLists.id, data.listId));
+    return click;
   }
 }
 

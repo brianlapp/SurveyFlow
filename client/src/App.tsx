@@ -23,6 +23,8 @@ import TyBrands from "@/pages/admin/ty-brands";
 import TyPages from "@/pages/admin/ty-pages";
 import TySurveys from "@/pages/admin/ty-surveys";
 import TySurveyQuestions from "@/pages/admin/ty-survey-questions";
+import EmailAds from "@/pages/admin/email-ads";
+import EmailAdsList from "@/pages/admin/email-ads-list";
 import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
@@ -82,6 +84,8 @@ function Router() {
             <Route path="/admin/ty-brands/:brandId/pages" component={TyPages} />
             <Route path="/admin/ty-surveys" component={TySurveys} />
             <Route path="/admin/ty-surveys/:surveyId/questions" component={TySurveyQuestions} />
+            <Route path="/admin/email-ads" component={EmailAds} />
+            <Route path="/admin/email-ads/:listId/ads" component={EmailAdsList} />
             <Route component={NotFound} />
           </Switch>
         </AdminLayout>

@@ -13,7 +13,8 @@ import {
   User,
   BookOpen,
   Send,
-  Gift
+  Gift,
+  Mail
 } from "lucide-react";
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Offers", href: "/admin/offers", icon: Tag },
   { name: "TY Surveys", href: "/admin/ty-surveys", icon: ClipboardList },
   { name: "TY Pages", href: "/admin/ty-brands", icon: Gift },
+  { name: "Email House Ads", href: "/admin/email-ads", icon: Mail },
   { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { name: "Postbacks", href: "/admin/postbacks", icon: Send },

@@ -486,3 +486,130 @@ export type TySurveyQuestionOffer = typeof tySurveyQuestionOffers.$inferSelect;
 export type InsertTySurveyQuestionOffer = z.infer<typeof insertTySurveyQuestionOfferSchema>;
 export type TySurveyResponse = typeof tySurveyResponses.$inferSelect;
 export type InsertTySurveyResponse = z.infer<typeof insertTySurveyResponseSchema>;
+
+// Email House Ads - Email Lists (containers for rotating ads)
+export const emailLists = pgTable("email_lists", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).unique().notNull(),
+  description: text("description"),
+  defaultWidth: integer("default_width").default(300),
+  defaultHeight: integer("default_height").default(250),
+  isActive: boolean("is_active").default(true),
+  nextAdIndex: integer("next_ad_index").default(0),
+  totalImpressions: integer("total_impressions").default(0),
+  totalClicks: integer("total_clicks").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Email House Ads - Individual ads within a list
+export const emailAds = pgTable("email_ads", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  listId: uuid("list_id").references(() => emailLists.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  imageUrl: varchar("image_url", { length: 500 }).notNull(),
+  tuneOfferId: varchar("tune_offer_id", { length: 100 }).notNull(),
+  affiliateId: varchar("affiliate_id", { length: 100 }).notNull(),
+  trackingDomain: varchar("tracking_domain", { length: 255 }).default('track.modemobile.com'),
+  buttonText: varchar("button_text", { length: 50 }).default('CONTINUE'),
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Email Ad Impressions tracking (for detailed analytics)
+export const emailAdImpressions = pgTable("email_ad_impressions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adId: uuid("ad_id").references(() => emailAds.id, { onDelete: 'cascade' }).notNull(),
+  listId: uuid("list_id").references(() => emailLists.id, { onDelete: 'cascade' }).notNull(),
+  sendId: varchar("send_id", { length: 255 }),
+  sub: varchar("sub", { length: 255 }),
+  sub1: varchar("sub1", { length: 255 }),
+  esp: varchar("esp", { length: 100 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Email Ad Clicks tracking
+export const emailAdClicks = pgTable("email_ad_clicks", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adId: uuid("ad_id").references(() => emailAds.id, { onDelete: 'cascade' }).notNull(),
+  listId: uuid("list_id").references(() => emailLists.id, { onDelete: 'cascade' }).notNull(),
+  sendId: varchar("send_id", { length: 255 }),
+  sub: varchar("sub", { length: 255 }),
+  sub1: varchar("sub1", { length: 255 }),
+  esp: varchar("esp", { length: 100 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Email Lists Relations
+export const emailListsRelations = relations(emailLists, ({ many }) => ({
+  ads: many(emailAds),
+  impressions: many(emailAdImpressions),
+  clicks: many(emailAdClicks),
+}));
+
+export const emailAdsRelations = relations(emailAds, ({ one, many }) => ({
+  list: one(emailLists, {
+    fields: [emailAds.listId],
+    references: [emailLists.id],
+  }),
+  impressions: many(emailAdImpressions),
+  clicks: many(emailAdClicks),
+}));
+
+export const emailAdImpressionsRelations = relations(emailAdImpressions, ({ one }) => ({
+  ad: one(emailAds, {
+    fields: [emailAdImpressions.adId],
+    references: [emailAds.id],
+  }),
+  list: one(emailLists, {
+    fields: [emailAdImpressions.listId],
+    references: [emailLists.id],
+  }),
+}));
+
+export const emailAdClicksRelations = relations(emailAdClicks, ({ one }) => ({
+  ad: one(emailAds, {
+    fields: [emailAdClicks.adId],
+    references: [emailAds.id],
+  }),
+  list: one(emailLists, {
+    fields: [emailAdClicks.listId],
+    references: [emailLists.id],
+  }),
+}));
+
+// Email List Insert Schemas
+export const insertEmailListSchema = createInsertSchema(emailLists).omit({
+  id: true,
+  nextAdIndex: true,
+  totalImpressions: true,
+  totalClicks: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmailAdSchema = createInsertSchema(emailAds).omit({
+  id: true,
+  impressions: true,
+  clicks: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Email List Types
+export type EmailList = typeof emailLists.$inferSelect;
+export type InsertEmailList = z.infer<typeof insertEmailListSchema>;
+export type EmailAd = typeof emailAds.$inferSelect;
+export type InsertEmailAd = z.infer<typeof insertEmailAdSchema>;
+export type EmailAdImpression = typeof emailAdImpressions.$inferSelect;
+export type EmailAdClick = typeof emailAdClicks.$inferSelect;

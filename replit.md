@@ -4,7 +4,10 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (January 14, 2026)
+## Latest Updates (January 27, 2026)
+- **Email House Ads System**: New feature at `/admin/email-ads` for creating rotating ad units for email newsletters. Features include: email list management (name, slug, dimensions, description), ad management with drag-drop reordering and active toggle, round-robin ad rotation on each image request, impression and click tracking with ESP attribution (sendId, sub, sub1, esp parameters). ESP templates for CleverTap, Mailchimp, Klaviyo, and Custom merge tags. Public endpoints: `/api/email/ad.png` serves rotating images with impression tracking (redirects to ad image), `/api/email/click` tracks clicks and redirects to Tune offer with affiliate attribution. Embed code generator provides copyable HTML snippets with ESP-specific merge tags. Database tables: email_lists, email_ads, email_ad_impressions, email_ad_clicks. Admin sidebar updated with Email House Ads link.
+
+## Previous Updates (January 14, 2026)
 - **TY Surveys System**: New branded survey system at `/admin/ty-surveys` for creating custom survey flows with offer integration. Features include: survey branding (logo, colors, fonts, thank you message), question management with drag-drop reordering, dual offer display modes (with_question - shows alongside question, after_question - interstitial between questions), AI question generation via GPT-4o, and public survey flow at `/s/{survey-slug}`. Database: ty_surveys, ty_survey_questions, ty_survey_question_offers, ty_survey_responses. Admin sidebar updated with TY Surveys link. All API endpoints include Zod validation.
 
 ## Previous Updates (January 13, 2026)
