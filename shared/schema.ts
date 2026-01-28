@@ -510,6 +510,7 @@ export const emailAds = pgTable("email_ads", {
   name: varchar("name", { length: 255 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   imageUrl: varchar("image_url", { length: 500 }).notNull(),
+  mobileImageUrl: varchar("mobile_image_url", { length: 500 }),
   tuneOfferId: varchar("tune_offer_id", { length: 100 }).notNull(),
   affiliateId: varchar("affiliate_id", { length: 100 }).notNull(),
   trackingDomain: varchar("tracking_domain", { length: 255 }).default('track.modemobile.com'),

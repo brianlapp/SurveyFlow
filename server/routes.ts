@@ -2078,10 +2078,15 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
         userAgent: req.headers['user-agent'],
       });
       
+      // Determine which image to serve (mobile vs desktop)
+      const requestedWidth = parseInt(w as string) || list.defaultWidth;
+      const isMobile = requestedWidth <= 400;
+      const selectedImageUrl = (isMobile && ad.mobileImageUrl) ? ad.mobileImageUrl : ad.imageUrl;
+      
       // Redirect to the ad image with cache-busting
-      const imageUrl = ad.imageUrl.includes('?') 
-        ? `${ad.imageUrl}&cb=${Date.now()}` 
-        : `${ad.imageUrl}?cb=${Date.now()}`;
+      const imageUrl = selectedImageUrl.includes('?') 
+        ? `${selectedImageUrl}&cb=${Date.now()}` 
+        : `${selectedImageUrl}?cb=${Date.now()}`;
       
       res.redirect(302, imageUrl);
     } catch (error) {

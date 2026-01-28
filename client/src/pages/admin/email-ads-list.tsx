@@ -164,6 +164,7 @@ export default function EmailAdsList() {
     name: "",
     title: "",
     imageUrl: "",
+    mobileImageUrl: "",
     tuneOfferId: "",
     affiliateId: "",
     trackingDomain: "track.modemobile.com",
@@ -247,6 +248,7 @@ export default function EmailAdsList() {
       name: "",
       title: "",
       imageUrl: "",
+      mobileImageUrl: "",
       tuneOfferId: "",
       affiliateId: "",
       trackingDomain: "track.modemobile.com",
@@ -262,6 +264,7 @@ export default function EmailAdsList() {
       name: ad.name,
       title: ad.title,
       imageUrl: ad.imageUrl,
+      mobileImageUrl: ad.mobileImageUrl || "",
       tuneOfferId: ad.tuneOfferId,
       affiliateId: ad.affiliateId,
       trackingDomain: ad.trackingDomain || "track.modemobile.com",
@@ -415,12 +418,23 @@ export default function EmailAdsList() {
               </div>
 
               <div className="space-y-2">
-                <Label>Image URL *</Label>
+                <Label>Desktop Image URL *</Label>
                 <Input 
                   placeholder="https://example.com/ad-image.png"
                   value={adFormData.imageUrl}
                   onChange={(e) => setAdFormData({ ...adFormData, imageUrl: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">Recommended: 728x90, 600x300, or 300x250</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Mobile Image URL (Optional)</Label>
+                <Input 
+                  placeholder="https://example.com/ad-mobile.png"
+                  value={adFormData.mobileImageUrl}
+                  onChange={(e) => setAdFormData({ ...adFormData, mobileImageUrl: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Shown on screens ≤400px. Recommended: 300x250, 320x50</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
