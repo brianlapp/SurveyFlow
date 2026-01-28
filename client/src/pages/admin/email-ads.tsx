@@ -559,29 +559,24 @@ export default function EmailAds() {
                 <div className="border rounded-lg p-4 bg-gray-100">
                   {embedAds.filter(a => a.isActive).length > 0 ? (
                     <div style={{ maxWidth: embedList.defaultWidth }} className="mx-auto">
-                      {(() => {
-                        const activeAd = embedAds.find(a => a.isActive);
-                        const buttonText = activeAd?.buttonText || "CONTINUE";
-                        const buttonColor = activeAd?.buttonColor || "#4CAF50";
-                        return (
-                          <div className="space-y-3">
-                            <img 
-                              src={activeAd?.imageUrl || ""} 
-                              alt="Preview" 
-                              style={{ width: '100%', height: 'auto', display: 'block' }}
-                            />
-                            <p className="text-sm font-medium text-center">{activeAd?.title || "Ad Title"}</p>
-                            <div className="text-center">
-                              <div 
-                                className="inline-block py-3 px-10 text-white font-bold rounded cursor-pointer"
-                                style={{ backgroundColor: buttonColor }}
-                              >
-                                {buttonText}
-                              </div>
-                            </div>
+                      <div className="space-y-3">
+                        <img 
+                          src={embedAds.find(a => a.isActive)?.imageUrl || ""} 
+                          alt="Preview" 
+                          style={{ width: '100%', height: 'auto', display: 'block' }}
+                        />
+                        <p className="text-sm font-medium text-center">
+                          {embedAds.find(a => a.isActive)?.title || "Ad Title"}
+                        </p>
+                        <div className="text-center">
+                          <div 
+                            className="inline-block py-3 px-10 text-white font-bold rounded cursor-pointer"
+                            style={{ backgroundColor: embedAds.find(a => a.isActive)?.buttonColor || "#4CAF50" }}
+                          >
+                            {embedAds.find(a => a.isActive)?.buttonText || "CONTINUE"}
                           </div>
-                        );
-                      })()}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-8">No active ads to preview</p>
