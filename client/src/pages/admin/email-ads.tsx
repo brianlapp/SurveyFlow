@@ -236,46 +236,15 @@ export default function EmailAds() {
     const buttonColor = activeAd?.buttonColor || "#4CAF50";
     const titleText = activeAd?.title || "";
     
-    const titleRow = titleText ? `
-  <tr>
-    <td align="center" style="padding:12px 10px;font-family:Arial,sans-serif;font-size:14px;font-weight:600;color:#333333;line-height:1.4;">
-      ${titleText}
-    </td>
-  </tr>` : '';
+    const titleRow = titleText ? `<tr><td align="center" style="padding:12px 10px;font-family:Arial,sans-serif;font-size:14px;font-weight:600;color:#333;line-height:1.4">${titleText}</td></tr>` : '';
     
-    const innerContent = `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth}px;">
-  <tr>
-    <td align="center">
-      <a href="${clickUrl}" target="_blank" style="text-decoration:none;">
-        <img src="${imageUrl}" width="${list.defaultWidth}" height="${list.defaultHeight}" alt="Sponsored offer" style="display:block;border:0;width:100%;max-width:${list.defaultWidth}px;height:auto;${useCardStyle ? 'border-radius:4px;' : ''}">
-      </a>
-    </td>
-  </tr>${titleRow}
-  <tr>
-    <td align="center" style="padding:10px 0;">
-      <!--[if mso]>
-      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${clickUrl}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="10%" stroke="f" fillcolor="${buttonColor}">
-        <w:anchorlock/>
-        <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">${buttonText}</center>
-      </v:roundrect>
-      <![endif]-->
-      <!--[if !mso]><!-->
-      <a href="${clickUrl}" target="_blank" style="display:inline-block;background-color:${buttonColor};color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 40px;border-radius:4px;text-align:center;mso-hide:all;">
-        ${buttonText}
-      </a>
-      <!--<![endif]-->
-    </td>
-  </tr>
-</table>`;
+    const imgStyle = `display:block;border:0;width:100%;max-width:${list.defaultWidth}px;height:auto${useCardStyle ? ';border-radius:4px' : ''}`;
+    const btnStyle = `display:inline-block;background-color:${buttonColor};color:#fff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 40px;border-radius:4px;text-align:center;mso-hide:all`;
+    
+    const innerContent = `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth}px"><tr><td align="center"><a href="${clickUrl}" target="_blank" style="text-decoration:none"><img src="${imageUrl}" width="${list.defaultWidth}" height="${list.defaultHeight}" alt="Offer" style="${imgStyle}"></a></td></tr>${titleRow}<tr><td align="center" style="padding:10px 0"><!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${clickUrl}" style="height:44px;v-text-anchor:middle;width:200px" arcsize="10%" stroke="f" fillcolor="${buttonColor}"><w:anchorlock/><center style="color:#fff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold">${buttonText}</center></v:roundrect><![endif]--><!--[if !mso]><!--><a href="${clickUrl}" target="_blank" style="${btnStyle}">${buttonText}</a><!--<![endif]--></td></tr></table>`;
 
     if (useCardStyle) {
-      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth + 32}px;">
-  <tr>
-    <td align="center" style="background-color:#f8f9fa;border:1px solid #e9ecef;border-radius:8px;padding:16px;">
-      ${innerContent}
-    </td>
-  </tr>
-</table>`;
+      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth + 32}px"><tr><td align="center" style="background:#f8f9fa;border:1px solid #e9ecef;border-radius:8px;padding:16px">${innerContent}</td></tr></table>`;
     }
     
     return innerContent;
