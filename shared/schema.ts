@@ -514,6 +514,7 @@ export const emailAds = pgTable("email_ads", {
   affiliateId: varchar("affiliate_id", { length: 100 }).notNull(),
   trackingDomain: varchar("tracking_domain", { length: 255 }).default('track.modemobile.com'),
   buttonText: varchar("button_text", { length: 50 }).default('CONTINUE'),
+  buttonColor: varchar("button_color", { length: 7 }).default('#4CAF50'),
   displayOrder: integer("display_order").default(0),
   isActive: boolean("is_active").default(true),
   impressions: integer("impressions").default(0),

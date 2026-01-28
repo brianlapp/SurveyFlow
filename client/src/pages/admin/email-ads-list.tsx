@@ -53,6 +53,7 @@ interface EmailAd {
   affiliateId: string;
   trackingDomain: string;
   buttonText: string;
+  buttonColor: string;
   displayOrder: number;
   isActive: boolean;
   impressions: number;
@@ -167,6 +168,7 @@ export default function EmailAdsList() {
     affiliateId: "",
     trackingDomain: "track.modemobile.com",
     buttonText: "CONTINUE",
+    buttonColor: "#4CAF50",
     isActive: true,
   });
 
@@ -249,6 +251,7 @@ export default function EmailAdsList() {
       affiliateId: "",
       trackingDomain: "track.modemobile.com",
       buttonText: "CONTINUE",
+      buttonColor: "#4CAF50",
       isActive: true,
     });
   };
@@ -263,6 +266,7 @@ export default function EmailAdsList() {
       affiliateId: ad.affiliateId,
       trackingDomain: ad.trackingDomain || "track.modemobile.com",
       buttonText: ad.buttonText || "CONTINUE",
+      buttonColor: ad.buttonColor || "#4CAF50",
       isActive: ad.isActive,
     });
     setIsAdDialogOpen(true);
@@ -447,13 +451,32 @@ export default function EmailAdsList() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Button Text</Label>
-                <Input 
-                  placeholder="CONTINUE"
-                  value={adFormData.buttonText}
-                  onChange={(e) => setAdFormData({ ...adFormData, buttonText: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Button Text</Label>
+                  <Input 
+                    placeholder="CONTINUE"
+                    value={adFormData.buttonText}
+                    onChange={(e) => setAdFormData({ ...adFormData, buttonText: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Button Color</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={adFormData.buttonColor}
+                      onChange={(e) => setAdFormData({ ...adFormData, buttonColor: e.target.value })}
+                      className="h-10 w-14 rounded border cursor-pointer"
+                    />
+                    <Input 
+                      placeholder="#4CAF50"
+                      value={adFormData.buttonColor}
+                      onChange={(e) => setAdFormData({ ...adFormData, buttonColor: e.target.value })}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -469,8 +492,8 @@ export default function EmailAdsList() {
             </div>
 
             <div className="space-y-4">
-              <Label>Preview</Label>
-              <div className="border rounded-lg p-4 bg-muted/30">
+              <Label>Email Ad Preview</Label>
+              <div className="border rounded-lg p-4 bg-gray-100">
                 {adFormData.imageUrl ? (
                   <div className="space-y-3">
                     <img 
@@ -480,9 +503,12 @@ export default function EmailAdsList() {
                       style={{ maxHeight: 200 }}
                     />
                     <p className="text-sm font-medium text-center">{adFormData.title || "Ad Title"}</p>
-                    <Button className="w-full" size="sm">
+                    <div 
+                      className="w-full py-3 text-center text-white font-bold rounded cursor-pointer"
+                      style={{ backgroundColor: adFormData.buttonColor || "#4CAF50" }}
+                    >
                       {adFormData.buttonText || "CONTINUE"}
-                    </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="h-48 flex items-center justify-center text-muted-foreground">

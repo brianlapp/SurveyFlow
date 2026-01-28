@@ -47,6 +47,7 @@ interface EmailAd {
   affiliateId: string;
   trackingDomain: string;
   buttonText: string;
+  buttonColor: string;
   displayOrder: number;
   isActive: boolean;
   impressions: number;
@@ -229,10 +230,34 @@ export default function EmailAds() {
   const getEmbedHtml = (list: EmailList) => {
     const imageUrl = getImageUrl(list);
     const clickUrl = getClickUrl(list);
-    return `<a href="${clickUrl}">
-  <img src="${imageUrl}"
-       width="${list.defaultWidth}" height="${list.defaultHeight}" alt="Sponsored offer" style="display:block;border:0;width:100%;max-width:${list.defaultWidth}px;height:auto;">
-</a>`;
+    const activeAd = embedAds.find(a => a.isActive);
+    const buttonText = activeAd?.buttonText || "CONTINUE";
+    const buttonColor = activeAd?.buttonColor || "#4CAF50";
+    
+    return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth}px;">
+  <tr>
+    <td align="center">
+      <a href="${clickUrl}" target="_blank" style="text-decoration:none;">
+        <img src="${imageUrl}" width="${list.defaultWidth}" height="${list.defaultHeight}" alt="Sponsored offer" style="display:block;border:0;width:100%;max-width:${list.defaultWidth}px;height:auto;">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="padding:10px 0;">
+      <!--[if mso]>
+      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${clickUrl}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="10%" stroke="f" fillcolor="${buttonColor}">
+        <w:anchorlock/>
+        <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">${buttonText}</center>
+      </v:roundrect>
+      <![endif]-->
+      <!--[if !mso]><!-->
+      <a href="${clickUrl}" target="_blank" style="display:inline-block;background-color:${buttonColor};color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 40px;border-radius:4px;text-align:center;mso-hide:all;">
+        ${buttonText}
+      </a>
+      <!--<![endif]-->
+    </td>
+  </tr>
+</table>`;
   };
 
   const getClickRate = (impressions: number, clicks: number) => {
@@ -528,6 +553,43 @@ export default function EmailAds() {
                 </div>
               </div>
 
+              {/* Email Ad Preview */}
+              <div className="space-y-2">
+                <Label>Email Ad Preview</Label>
+                <div className="border rounded-lg p-4 bg-gray-100">
+                  {embedAds.filter(a => a.isActive).length > 0 ? (
+                    <div style={{ maxWidth: embedList.defaultWidth }} className="mx-auto">
+                      {(() => {
+                        const activeAd = embedAds.find(a => a.isActive);
+                        const buttonText = activeAd?.buttonText || "CONTINUE";
+                        const buttonColor = activeAd?.buttonColor || "#4CAF50";
+                        return (
+                          <div className="space-y-3">
+                            <img 
+                              src={activeAd?.imageUrl || ""} 
+                              alt="Preview" 
+                              style={{ width: '100%', height: 'auto', display: 'block' }}
+                            />
+                            <p className="text-sm font-medium text-center">{activeAd?.title || "Ad Title"}</p>
+                            <div className="text-center">
+                              <div 
+                                className="inline-block py-3 px-10 text-white font-bold rounded cursor-pointer"
+                                style={{ backgroundColor: buttonColor }}
+                              >
+                                {buttonText}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No active ads to preview</p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Note: Template variables like {selectedEsp.sendTag} will show as-is until processed by your ESP.</p>
+              </div>
+
               <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">How it works</h4>
                 <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
@@ -535,6 +597,7 @@ export default function EmailAds() {
                   <li>• Impressions are tracked when the image loads</li>
                   <li>• Clicks are tracked and redirected to the Tune offer</li>
                   <li>• ESP merge tags are passed through for attribution</li>
+                  <li>• Button uses bulletproof email tables for Outlook compatibility</li>
                 </ul>
               </div>
             </div>
