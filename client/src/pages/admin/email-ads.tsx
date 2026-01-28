@@ -91,6 +91,7 @@ export default function EmailAds() {
   const [embedAds, setEmbedAds] = useState<EmailAd[]>([]);
   const [selectedEsp, setSelectedEsp] = useState(espTemplates[0]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [useCardStyle, setUseCardStyle] = useState(true);
   
   const [listFormData, setListFormData] = useState({
     name: "",
@@ -242,11 +243,11 @@ export default function EmailAds() {
     </td>
   </tr>` : '';
     
-    return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth}px;">
+    const innerContent = `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth}px;">
   <tr>
     <td align="center">
       <a href="${clickUrl}" target="_blank" style="text-decoration:none;">
-        <img src="${imageUrl}" width="${list.defaultWidth}" height="${list.defaultHeight}" alt="Sponsored offer" style="display:block;border:0;width:100%;max-width:${list.defaultWidth}px;height:auto;">
+        <img src="${imageUrl}" width="${list.defaultWidth}" height="${list.defaultHeight}" alt="Sponsored offer" style="display:block;border:0;width:100%;max-width:${list.defaultWidth}px;height:auto;${useCardStyle ? 'border-radius:4px;' : ''}">
       </a>
     </td>
   </tr>${titleRow}
@@ -266,6 +267,18 @@ export default function EmailAds() {
     </td>
   </tr>
 </table>`;
+
+    if (useCardStyle) {
+      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth + 32}px;">
+  <tr>
+    <td align="center" style="background-color:#f8f9fa;border:1px solid #e9ecef;border-radius:8px;padding:16px;">
+      ${innerContent}
+    </td>
+  </tr>
+</table>`;
+    }
+    
+    return innerContent;
   };
 
   const getClickRate = (impressions: number, clicks: number) => {
@@ -545,6 +558,29 @@ export default function EmailAds() {
                 </div>
               </div>
 
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="space-y-0.5">
+                  <Label>Card Style</Label>
+                  <p className="text-xs text-muted-foreground">Wrap ad in a card container with border</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={useCardStyle ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseCardStyle(true)}
+                  >
+                    Card
+                  </Button>
+                  <Button
+                    variant={!useCardStyle ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseCardStyle(false)}
+                  >
+                    Plain
+                  </Button>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Complete HTML Embed Code</Label>
@@ -566,12 +602,25 @@ export default function EmailAds() {
                 <Label>Email Ad Preview</Label>
                 <div className="border rounded-lg p-4 bg-gray-100">
                   {embedAds.filter(a => a.isActive).length > 0 ? (
-                    <div style={{ maxWidth: embedList.defaultWidth }} className="mx-auto">
-                      <div className="space-y-3">
+                    <div style={{ maxWidth: embedList.defaultWidth + (useCardStyle ? 32 : 0) }} className="mx-auto">
+                      <div 
+                        className="space-y-3"
+                        style={useCardStyle ? { 
+                          backgroundColor: '#f8f9fa', 
+                          border: '1px solid #e9ecef', 
+                          borderRadius: '8px', 
+                          padding: '16px' 
+                        } : {}}
+                      >
                         <img 
                           src={embedAds.find(a => a.isActive)?.imageUrl || ""} 
                           alt="Preview" 
-                          style={{ width: '100%', height: 'auto', display: 'block' }}
+                          style={{ 
+                            width: '100%', 
+                            height: 'auto', 
+                            display: 'block',
+                            borderRadius: useCardStyle ? '4px' : '0'
+                          }}
                         />
                         <p className="text-sm font-medium text-center">
                           {embedAds.find(a => a.isActive)?.title || "Ad Title"}
