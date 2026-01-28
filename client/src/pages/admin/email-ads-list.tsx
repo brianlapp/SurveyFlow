@@ -424,7 +424,7 @@ export default function EmailAdsList() {
                   value={adFormData.imageUrl}
                   onChange={(e) => setAdFormData({ ...adFormData, imageUrl: e.target.value })}
                 />
-                <p className="text-xs text-muted-foreground">Recommended: 728x90, 600x300, or 300x250</p>
+                <p className="text-xs text-muted-foreground">Recommended: 600x150, 728x90, or 300x250</p>
               </div>
 
               <div className="space-y-2">
@@ -434,7 +434,7 @@ export default function EmailAdsList() {
                   value={adFormData.mobileImageUrl}
                   onChange={(e) => setAdFormData({ ...adFormData, mobileImageUrl: e.target.value })}
                 />
-                <p className="text-xs text-muted-foreground">Shown on screens ≤400px. Recommended: 300x250, 320x50</p>
+                <p className="text-xs text-muted-foreground">Shown on screens ≤400px. Recommended: 320x150, 300x250</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
