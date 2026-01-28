@@ -1,0 +1,24 @@
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:300px;">
+  <tr>
+    <td align="center">
+      <a href="https://be89f6b4-b7cf-47ea-be5a-959ddf2f548d-00-1niy8fx9utman.riker.replit.dev/api/email/click?property=freefinds&send={{ Campaign.campaignId }}&sub=$replacement$##y[none]$/replacement$&sub1={{Profile.customer_id|default:'none'}}&esp=clevertap" target="_blank" style="text-decoration:none;">
+        <img src="https://be89f6b4-b7cf-47ea-be5a-959ddf2f548d-00-1niy8fx9utman.riker.replit.dev/api/email/ad.png?property=freefinds&send={{ Campaign.campaignId }}&sub=$replacement$##y[none]$/replacement$&sub1={{Profile.customer_id|default:'none'}}&esp=clevertap&w=300&h=250" width="300" height="250" alt="Sponsored offer" style="display:block;border:0;width:100%;max-width:300px;height:auto;">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="padding:10px 0;">
+      <!--[if mso]>
+      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://be89f6b4-b7cf-47ea-be5a-959ddf2f548d-00-1niy8fx9utman.riker.replit.dev/api/email/click?property=freefinds&send={{ Campaign.campaignId }}&sub=$replacement$##y[none]$/replacement$&sub1={{Profile.customer_id|default:'none'}}&esp=clevertap" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="10%" stroke="f" fillcolor="#6ac86d">
+        <w:anchorlock/>
+        <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">CONTINUE</center>
+      </v:roundrect>
+      <![endif]-->
+      <!--[if !mso]><!-->
+      <a href="https://be89f6b4-b7cf-47ea-be5a-959ddf2f548d-00-1niy8fx9utman.riker.replit.dev/api/email/click?property=freefinds&send={{ Campaign.campaignId }}&sub=$replacement$##y[none]$/replacement$&sub1={{Profile.customer_id|default:'none'}}&esp=clevertap" target="_blank" style="display:inline-block;background-color:#6ac86d;color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 40px;border-radius:4px;text-align:center;mso-hide:all;">
+        CONTINUE
+      </a>
+      <!--<![endif]-->
+    </td>
+  </tr>
+</table>

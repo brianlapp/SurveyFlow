@@ -233,6 +233,14 @@ export default function EmailAds() {
     const activeAd = embedAds.find(a => a.isActive);
     const buttonText = activeAd?.buttonText || "CONTINUE";
     const buttonColor = activeAd?.buttonColor || "#4CAF50";
+    const titleText = activeAd?.title || "";
+    
+    const titleRow = titleText ? `
+  <tr>
+    <td align="center" style="padding:12px 10px;font-family:Arial,sans-serif;font-size:14px;font-weight:600;color:#333333;line-height:1.4;">
+      ${titleText}
+    </td>
+  </tr>` : '';
     
     return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${list.defaultWidth}px;">
   <tr>
@@ -241,7 +249,7 @@ export default function EmailAds() {
         <img src="${imageUrl}" width="${list.defaultWidth}" height="${list.defaultHeight}" alt="Sponsored offer" style="display:block;border:0;width:100%;max-width:${list.defaultWidth}px;height:auto;">
       </a>
     </td>
-  </tr>
+  </tr>${titleRow}
   <tr>
     <td align="center" style="padding:10px 0;">
       <!--[if mso]>
