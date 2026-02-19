@@ -196,6 +196,7 @@ export interface IStorage {
   incrementEmailAdImpressions(id: string): Promise<void>;
   incrementEmailAdClicks(id: string): Promise<void>;
   getNextRotatingEmailAd(listId: string): Promise<EmailAd | undefined>;
+  getEmailAdBySid(listId: string, sid: string, adType?: string): Promise<EmailAd | undefined>;
   
   // Email Ad Tracking operations
   recordEmailAdImpression(data: { adId: string; listId: string; sendId?: string; sub?: string; sub1?: string; esp?: string; ipAddress?: string; userAgent?: string }): Promise<EmailAdImpression>;
@@ -1119,6 +1120,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(emailLists.id, listId));
 
     return ad;
+  }
+
+  async getEmailAdBySid(listId: string, sid: string, adType?: string): Promise<EmailAd | undefined> {
+    const activeAds = await this.getActiveEmailAdsByListOrdered(listId);
+    let filteredAds = adType ? activeAds.filter(a => a.adType === adType) : activeAds;
+    if (filteredAds.length === 0) return undefined;
+    let hash = 0;
+    for (let i = 0; i < sid.length; i++) {
+      hash = ((hash << 5) - hash) + sid.charCodeAt(i);
+      hash |= 0;
+    }
+    const index = Math.abs(hash) % filteredAds.length;
+    return filteredAds[index];
   }
 
   // Email Ad Tracking operations

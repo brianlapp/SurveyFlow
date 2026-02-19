@@ -517,6 +517,7 @@ export const emailAds = pgTable("email_ads", {
   linkColor: varchar("link_color", { length: 7 }).default('#0066cc'),
   textColor: varchar("text_color", { length: 7 }).default('#333333'),
   fontSize: integer("font_size").default(14),
+  subjectLine: varchar("subject_line", { length: 255 }),
   tuneOfferId: varchar("tune_offer_id", { length: 100 }).notNull(),
   affiliateId: varchar("affiliate_id", { length: 100 }).notNull(),
   trackingDomain: varchar("tracking_domain", { length: 255 }).default('track.modemobile.com'),

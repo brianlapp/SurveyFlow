@@ -2184,10 +2184,47 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
     }
   });
 
+  app.get('/api/email/subject', async (req, res) => {
+    try {
+      const { property, sid, type } = req.query;
+      
+      if (!property) {
+        return res.status(400).send('');
+      }
+      
+      const list = await storage.getEmailListBySlug(property as string);
+      if (!list || !list.isActive) {
+        return res.status(404).send('');
+      }
+      
+      const adType = (type as string) || 'text';
+      let ad: any;
+      
+      if (sid) {
+        ad = await storage.getEmailAdBySid(list.id, sid as string, adType);
+      } else {
+        const activeAds = await storage.getActiveEmailAdsByListOrdered(list.id);
+        const filtered = activeAds.filter(a => a.adType === adType);
+        ad = filtered.length > 0 ? filtered[0] : undefined;
+      }
+      
+      if (!ad || !ad.subjectLine) {
+        return res.status(404).send('');
+      }
+      
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.send(ad.subjectLine);
+    } catch (error) {
+      console.error("Error serving subject line:", error);
+      res.status(500).send('');
+    }
+  });
+
   // Serve text ad as email-safe HTML (for text-based email ad units)
   app.get('/api/email/text-ad', async (req, res) => {
     try {
-      const { property, send, sub, sub1, esp } = req.query;
+      const { property, send, sub, sub1, esp, sid } = req.query;
       
       if (!property) {
         return res.status(400).send('Missing property parameter');
@@ -2198,8 +2235,14 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
         return res.status(404).send('List not found');
       }
       
-      const ad = await storage.getNextRotatingEmailAd(list.id);
-      if (!ad || ad.adType !== 'text') {
+      let ad;
+      if (sid) {
+        ad = await storage.getEmailAdBySid(list.id, sid as string, 'text');
+      } else {
+        ad = await storage.getNextRotatingEmailAd(list.id);
+        if (ad && ad.adType !== 'text') ad = undefined;
+      }
+      if (!ad) {
         return res.status(404).send('No active text ads');
       }
       
