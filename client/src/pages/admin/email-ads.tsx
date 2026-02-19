@@ -237,7 +237,12 @@ export default function EmailAds() {
 
   const getTextAdUrl = (list: EmailList) => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/api/email/text-ad?property=${list.slug}&send=${selectedEsp.sendTag}&sub=${selectedEsp.subTag}&sub1=${selectedEsp.sub1Tag}&esp=${selectedEsp.name.toLowerCase()}`;
+    return `${baseUrl}/api/email/text-ad?property=${list.slug}&send=${selectedEsp.sendTag}&sub=${selectedEsp.subTag}&sub1=${selectedEsp.sub1Tag}&esp=${selectedEsp.name.toLowerCase()}&sid=${selectedEsp.sendTag}`;
+  };
+
+  const getSubjectUrl = (list: EmailList) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/api/email/subject?property=${list.slug}&sid=${selectedEsp.sendTag}`;
   };
 
   const hasTextAds = embedAds.some(a => a.isActive && a.adType === 'text');
@@ -709,6 +714,46 @@ export default function EmailAds() {
                 </>
               )}
 
+              {hasTextAds && embedList && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Dynamic Subject Line</Badge>
+                  </h3>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Subject Line API URL</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => copyToClipboard(getSubjectUrl(embedList), 'subjectUrl')}
+                      >
+                        {copiedField === 'subjectUrl' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <code className="text-xs break-all">{getSubjectUrl(embedList)}</code>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Returns plain text subject line matching the ad shown in the email body. Both use the same send ID for deterministic matching.</p>
+                  </div>
+
+                  <div className="mt-3 bg-amber-50 dark:bg-amber-950 p-4 rounded-lg space-y-3">
+                    <h4 className="font-medium text-amber-900 dark:text-amber-100">CleverTap Setup</h4>
+                    <div className="text-sm text-amber-800 dark:text-amber-200 space-y-2">
+                      <p><strong>How it works:</strong> The send ID ({selectedEsp.sendTag}) is used as a shared key. When CleverTap sends an email, both the subject line API and the text ad URL receive the same send ID, so they always return content from the same ad.</p>
+                      <p><strong>Step 1:</strong> In your CleverTap campaign, go to the subject line field.</p>
+                      <p><strong>Step 2:</strong> Use a Liquid tag with Connected Content to fetch the subject dynamically:</p>
+                      <div className="bg-white dark:bg-gray-900 p-2 rounded border font-mono text-xs overflow-x-auto">
+                        {`{{connected_content "${getSubjectUrl(embedList).replace(selectedEsp.sendTag, '{{send_id}}')}" :save subject}}{{subject}}`}
+                      </div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">If CleverTap doesn't support Connected Content in subject lines, use Liquid personalization with a webhook or user property that stores the subject line fetched at campaign trigger time.</p>
+                      <p><strong>Step 3:</strong> Add the text ad URL in your email body - the matching ad content will display automatically.</p>
+                      <p><strong>Fallback:</strong> Set a static subject line in CleverTap as a fallback in case the API is unreachable.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <p className="text-xs text-muted-foreground">Note: Template variables like {selectedEsp.sendTag} will show as-is until processed by your ESP.</p>
 
               <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
@@ -716,6 +761,7 @@ export default function EmailAds() {
                 <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                   <li>• <strong>Image ads:</strong> The image URL rotates through active ads on each email open</li>
                   <li>• <strong>Text ads:</strong> The URL returns live HTML content that renders as native email text</li>
+                  <li>• <strong>Dynamic subjects:</strong> Subject line API returns matching subject using the same send ID</li>
                   <li>• Impressions are tracked automatically</li>
                   <li>• Clicks are tracked and redirected to the Tune offer</li>
                   <li>• ESP merge tags are passed through for attribution</li>

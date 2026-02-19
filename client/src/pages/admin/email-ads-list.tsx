@@ -58,6 +58,7 @@ interface EmailAd {
   linkColor: string;
   textColor: string;
   fontSize: number;
+  subjectLine: string;
   tuneOfferId: string;
   affiliateId: string;
   trackingDomain: string;
@@ -191,6 +192,7 @@ export default function EmailAdsList() {
     linkColor: "#0066cc",
     textColor: "#333333",
     fontSize: 14,
+    subjectLine: "",
     tuneOfferId: "",
     affiliateId: "",
     trackingDomain: "track.modemobile.com",
@@ -281,6 +283,7 @@ export default function EmailAdsList() {
       linkColor: "#0066cc",
       textColor: "#333333",
       fontSize: 14,
+      subjectLine: "",
       tuneOfferId: "",
       affiliateId: "",
       trackingDomain: "track.modemobile.com",
@@ -303,6 +306,7 @@ export default function EmailAdsList() {
       linkColor: ad.linkColor || "#0066cc",
       textColor: ad.textColor || "#333333",
       fontSize: ad.fontSize || 14,
+      subjectLine: ad.subjectLine || "",
       tuneOfferId: ad.tuneOfferId,
       affiliateId: ad.affiliateId,
       trackingDomain: ad.trackingDomain || "track.modemobile.com",
@@ -510,6 +514,16 @@ export default function EmailAdsList() {
                   </div>
                 </>
               )}
+
+              <div className="space-y-2">
+                <Label>Email Subject Line (for Dynamic Subject)</Label>
+                <Input
+                  placeholder="e.g., Nvidia's AI chief just revealed this..."
+                  value={adFormData.subjectLine}
+                  onChange={(e) => setAdFormData({ ...adFormData, subjectLine: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Used by CleverTap to dynamically set the email subject line to match this ad. Leave blank if not needed.</p>
+              </div>
 
               {adFormData.adType === 'text' && (
                 <>
