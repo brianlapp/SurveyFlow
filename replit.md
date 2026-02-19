@@ -4,7 +4,10 @@ A multi-brand co-registration platform designed to transform user engagement int
 
 # Recent Changes
 
-## Latest Updates (January 27, 2026)
+## Latest Updates (February 19, 2026)
+- **Text-Based Email Ad Units**: New ad type for email house ads system. Text ads render as native email content (like editorial/advertorial text) with all links and content manageable from the dashboard. Features: adType toggle (Image/Text) in ad creation form, body text editor with markdown-style link support `[link text](url)`, configurable CTA link text, text/link color pickers, font size control, live preview for both ad types. Public endpoint: `/api/email/text-ad?property=SLUG` returns email-safe HTML with table-based layout, inline styles, VML buttons for Outlook, click tracking through Tune. All links route through `/api/email/click` for attribution. Text ads use same round-robin rotation and impression/click tracking as image ads. Schema: added adType, bodyHtml, ctaText, linkColor, textColor, fontSize fields to email_ads table.
+
+## Previous Updates (January 27, 2026)
 - **Email House Ads System**: New feature at `/admin/email-ads` for creating rotating ad units for email newsletters. Features include: email list management (name, slug, dimensions, description), ad management with drag-drop reordering and active toggle, round-robin ad rotation on each image request, impression and click tracking with ESP attribution (sendId, sub, sub1, esp parameters). ESP templates for CleverTap, Mailchimp, Klaviyo, and Custom merge tags. Public endpoints: `/api/email/ad.png` serves rotating images with impression tracking (redirects to ad image), `/api/email/click` tracks clicks and redirects to Tune offer with affiliate attribution. Embed code generator provides copyable HTML snippets with ESP-specific merge tags. Database tables: email_lists, email_ads, email_ad_impressions, email_ad_clicks. Admin sidebar updated with Email House Ads link.
 
 ## Previous Updates (January 14, 2026)

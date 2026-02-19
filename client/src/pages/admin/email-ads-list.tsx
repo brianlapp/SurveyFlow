@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, 
   Pencil, 
@@ -17,6 +18,7 @@ import {
   ArrowLeft,
   GripVertical,
   Image as ImageIcon,
+  Type,
   ExternalLink
 } from "lucide-react";
 import {
@@ -46,9 +48,16 @@ interface EmailList {
 interface EmailAd {
   id: string;
   listId: string;
+  adType: string;
   name: string;
   title: string;
   imageUrl: string;
+  mobileImageUrl: string;
+  bodyHtml: string;
+  ctaText: string;
+  linkColor: string;
+  textColor: string;
+  fontSize: number;
   tuneOfferId: string;
   affiliateId: string;
   trackingDomain: string;
@@ -94,7 +103,11 @@ function SortableAdRow({ ad, onEdit, onDelete, onToggleActive }: {
         </div>
       </TableCell>
       <TableCell>
-        {ad.imageUrl ? (
+        {ad.adType === 'text' ? (
+          <div className="h-12 w-20 bg-blue-50 rounded flex items-center justify-center">
+            <Type className="h-5 w-5 text-blue-500" />
+          </div>
+        ) : ad.imageUrl ? (
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
@@ -106,7 +119,14 @@ function SortableAdRow({ ad, onEdit, onDelete, onToggleActive }: {
           </div>
         )}
       </TableCell>
-      <TableCell className="font-medium">{ad.name}</TableCell>
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+          {ad.name}
+          <Badge variant="outline" className="text-[10px]">
+            {ad.adType === 'text' ? 'Text' : 'Image'}
+          </Badge>
+        </div>
+      </TableCell>
       <TableCell className="max-w-48 truncate">{ad.title}</TableCell>
       <TableCell>
         <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{ad.tuneOfferId}</code>
@@ -161,10 +181,16 @@ export default function EmailAdsList() {
   const [editingAd, setEditingAd] = useState<EmailAd | null>(null);
   
   const [adFormData, setAdFormData] = useState({
+    adType: "image" as string,
     name: "",
     title: "",
     imageUrl: "",
     mobileImageUrl: "",
+    bodyHtml: "",
+    ctaText: "",
+    linkColor: "#0066cc",
+    textColor: "#333333",
+    fontSize: 14,
     tuneOfferId: "",
     affiliateId: "",
     trackingDomain: "track.modemobile.com",
@@ -245,10 +271,16 @@ export default function EmailAdsList() {
 
   const resetAdForm = () => {
     setAdFormData({
+      adType: "image",
       name: "",
       title: "",
       imageUrl: "",
       mobileImageUrl: "",
+      bodyHtml: "",
+      ctaText: "",
+      linkColor: "#0066cc",
+      textColor: "#333333",
+      fontSize: 14,
       tuneOfferId: "",
       affiliateId: "",
       trackingDomain: "track.modemobile.com",
@@ -261,10 +293,16 @@ export default function EmailAdsList() {
   const openEditAdDialog = (ad: EmailAd) => {
     setEditingAd(ad);
     setAdFormData({
+      adType: ad.adType || "image",
       name: ad.name,
       title: ad.title,
-      imageUrl: ad.imageUrl,
+      imageUrl: ad.imageUrl || "",
       mobileImageUrl: ad.mobileImageUrl || "",
+      bodyHtml: ad.bodyHtml || "",
+      ctaText: ad.ctaText || "",
+      linkColor: ad.linkColor || "#0066cc",
+      textColor: ad.textColor || "#333333",
+      fontSize: ad.fontSize || 14,
       tuneOfferId: ad.tuneOfferId,
       affiliateId: ad.affiliateId,
       trackingDomain: ad.trackingDomain || "track.modemobile.com",
@@ -282,8 +320,18 @@ export default function EmailAdsList() {
   };
 
   const handleAdSubmit = () => {
-    if (!adFormData.name || !adFormData.title || !adFormData.imageUrl || !adFormData.tuneOfferId || !adFormData.affiliateId) {
+    if (!adFormData.name || !adFormData.tuneOfferId || !adFormData.affiliateId) {
       toast({ title: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    
+    if (adFormData.adType === 'image' && !adFormData.imageUrl) {
+      toast({ title: "Image URL is required for image ads", variant: "destructive" });
+      return;
+    }
+    
+    if (adFormData.adType === 'text' && !adFormData.bodyHtml) {
+      toast({ title: "Body text is required for text ads", variant: "destructive" });
       return;
     }
     
@@ -395,47 +443,144 @@ export default function EmailAdsList() {
           <DialogHeader>
             <DialogTitle>{editingAd ? "Edit Ad" : "Add Ad"}</DialogTitle>
           </DialogHeader>
+
+          <div className="space-y-2">
+            <Label>Ad Type</Label>
+            <div className="flex gap-2">
+              <Button
+                variant={adFormData.adType === 'image' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAdFormData({ ...adFormData, adType: 'image' })}
+              >
+                <ImageIcon className="h-4 w-4 mr-1" /> Image Ad
+              </Button>
+              <Button
+                variant={adFormData.adType === 'text' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAdFormData({ ...adFormData, adType: 'text' })}
+              >
+                <Type className="h-4 w-4 mr-1" /> Text Ad
+              </Button>
+            </div>
+          </div>
           
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Ad Name *</Label>
                 <Input 
-                  placeholder="Summer Sale Banner"
+                  placeholder={adFormData.adType === 'text' ? "Nvidia AI Investment Promo" : "Summer Sale Banner"}
                   value={adFormData.name}
                   onChange={(e) => setAdFormData({ ...adFormData, name: e.target.value })}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label>Title *</Label>
+                <Label>Title</Label>
                 <Input 
-                  placeholder="EXCLUSIVE: Get 50% off today!"
+                  placeholder={adFormData.adType === 'text' ? "Internal label for this ad" : "EXCLUSIVE: Get 50% off today!"}
                   value={adFormData.title}
                   onChange={(e) => setAdFormData({ ...adFormData, title: e.target.value })}
                 />
-                <p className="text-xs text-muted-foreground">Displayed on the ad image</p>
+                <p className="text-xs text-muted-foreground">
+                  {adFormData.adType === 'text' ? 'Internal label (not shown in email)' : 'Displayed on the ad image'}
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label>Desktop Image URL *</Label>
-                <Input 
-                  placeholder="https://example.com/ad-image.png"
-                  value={adFormData.imageUrl}
-                  onChange={(e) => setAdFormData({ ...adFormData, imageUrl: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">Recommended: 600x150, 728x90, or 300x250</p>
-              </div>
+              {adFormData.adType === 'image' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Desktop Image URL *</Label>
+                    <Input 
+                      placeholder="https://example.com/ad-image.png"
+                      value={adFormData.imageUrl}
+                      onChange={(e) => setAdFormData({ ...adFormData, imageUrl: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">Recommended: 600x150, 728x90, or 300x250</p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Mobile Image URL (Optional)</Label>
-                <Input 
-                  placeholder="https://example.com/ad-mobile.png"
-                  value={adFormData.mobileImageUrl}
-                  onChange={(e) => setAdFormData({ ...adFormData, mobileImageUrl: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">Shown on screens ≤400px. Recommended: 320x150, 300x250</p>
-              </div>
+                  <div className="space-y-2">
+                    <Label>Mobile Image URL (Optional)</Label>
+                    <Input 
+                      placeholder="https://example.com/ad-mobile.png"
+                      value={adFormData.mobileImageUrl}
+                      onChange={(e) => setAdFormData({ ...adFormData, mobileImageUrl: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">Shown on screens ≤400px. Recommended: 320x150, 300x250</p>
+                  </div>
+                </>
+              )}
+
+              {adFormData.adType === 'text' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Body Text *</Label>
+                    <Textarea 
+                      placeholder={"Nvidia's Networking Chief just revealed where he is convinced the next AI fortune could be made.\n\nAnd here's the best part... You don't need a PhD or millions in seed capital.\n\nYet, these tech titans aren't talking about AI chips, chatbots, or anything like that."}
+                      value={adFormData.bodyHtml}
+                      onChange={(e) => setAdFormData({ ...adFormData, bodyHtml: e.target.value })}
+                      rows={8}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">Plain text. Line breaks are preserved. Use [link text](url) for inline links (all links route through click tracker).</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>CTA Link Text (Optional)</Label>
+                    <Input 
+                      placeholder="Click here to watch the full story now."
+                      value={adFormData.ctaText}
+                      onChange={(e) => setAdFormData({ ...adFormData, ctaText: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">Displayed as an underlined link below the body text</p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>Text Color</Label>
+                      <div className="flex gap-1">
+                        <input
+                          type="color"
+                          value={adFormData.textColor}
+                          onChange={(e) => setAdFormData({ ...adFormData, textColor: e.target.value })}
+                          className="h-10 w-10 rounded border cursor-pointer"
+                        />
+                        <Input 
+                          value={adFormData.textColor}
+                          onChange={(e) => setAdFormData({ ...adFormData, textColor: e.target.value })}
+                          className="flex-1 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Link Color</Label>
+                      <div className="flex gap-1">
+                        <input
+                          type="color"
+                          value={adFormData.linkColor}
+                          onChange={(e) => setAdFormData({ ...adFormData, linkColor: e.target.value })}
+                          className="h-10 w-10 rounded border cursor-pointer"
+                        />
+                        <Input 
+                          value={adFormData.linkColor}
+                          onChange={(e) => setAdFormData({ ...adFormData, linkColor: e.target.value })}
+                          className="flex-1 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Font Size</Label>
+                      <Input 
+                        type="number"
+                        min={10}
+                        max={24}
+                        value={adFormData.fontSize}
+                        onChange={(e) => setAdFormData({ ...adFormData, fontSize: parseInt(e.target.value) || 14 })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -507,8 +652,67 @@ export default function EmailAdsList() {
 
             <div className="space-y-4">
               <Label>Email Ad Preview</Label>
-              <div className="border rounded-lg p-4 bg-gray-100">
-                {adFormData.imageUrl ? (
+              <div className="border rounded-lg p-4 bg-white">
+                {adFormData.adType === 'text' ? (
+                  <div style={{ maxWidth: 600, fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                    {adFormData.bodyHtml ? (
+                      <div>
+                        <div 
+                          style={{ 
+                            fontSize: adFormData.fontSize || 14, 
+                            lineHeight: 1.6, 
+                            color: adFormData.textColor || '#333333',
+                            whiteSpace: 'pre-wrap'
+                          }}
+                        >
+                          {adFormData.bodyHtml.split(/\[([^\]]+)\]\(([^)]+)\)/).map((part, i) => {
+                            if (i % 3 === 1) {
+                              return (
+                                <a key={i} href="#" style={{ color: adFormData.linkColor || '#0066cc', textDecoration: 'underline', fontWeight: 600 }} onClick={(e) => e.preventDefault()}>
+                                  {part}
+                                </a>
+                              );
+                            }
+                            if (i % 3 === 2) return null;
+                            return <span key={i}>{part}</span>;
+                          })}
+                        </div>
+                        {adFormData.ctaText && (
+                          <div style={{ paddingTop: 12 }}>
+                            <a href="#" style={{ color: adFormData.linkColor || '#0066cc', textDecoration: 'underline', fontWeight: 600, fontSize: adFormData.fontSize || 14 }} onClick={(e) => e.preventDefault()}>
+                              {adFormData.ctaText}
+                            </a>
+                          </div>
+                        )}
+                        {adFormData.buttonText && (
+                          <div style={{ paddingTop: 16, textAlign: 'center' }}>
+                            <span 
+                              style={{ 
+                                display: 'inline-block', 
+                                backgroundColor: adFormData.buttonColor || '#4CAF50', 
+                                color: '#fff', 
+                                fontWeight: 'bold', 
+                                padding: '12px 40px', 
+                                borderRadius: 4, 
+                                fontSize: 16,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {adFormData.buttonText}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-muted-foreground">
+                        <div className="text-center">
+                          <Type className="h-12 w-12 mx-auto mb-2" />
+                          <p className="text-sm">Enter body text to preview</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : adFormData.imageUrl ? (
                   <div className="space-y-3">
                     <img 
                       src={adFormData.imageUrl} 
@@ -537,8 +741,10 @@ export default function EmailAdsList() {
               <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg">
                 <h4 className="font-medium text-amber-900 dark:text-amber-100 text-sm mb-1">Tip</h4>
                 <p className="text-xs text-amber-800 dark:text-amber-200">
-                  For best results, use images that are 300x250px or similar aspect ratio. 
-                  The image will be displayed in email clients with the dimensions set in the list settings.
+                  {adFormData.adType === 'text' 
+                    ? 'Text ads render as native email content. The body text, links, and CTA are all managed here. Changes take effect on the next email open.'
+                    : 'For best results, use images that are 300x250px or similar aspect ratio. The image will be displayed in email clients with the dimensions set in the list settings.'
+                  }
                 </p>
               </div>
             </div>

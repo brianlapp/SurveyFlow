@@ -40,9 +40,16 @@ interface EmailList {
 interface EmailAd {
   id: string;
   listId: string;
+  adType: string;
   name: string;
   title: string;
   imageUrl: string;
+  mobileImageUrl: string;
+  bodyHtml: string;
+  ctaText: string;
+  linkColor: string;
+  textColor: string;
+  fontSize: number;
   tuneOfferId: string;
   affiliateId: string;
   trackingDomain: string;
@@ -227,6 +234,14 @@ export default function EmailAds() {
     if (adId) url += `&ad=${adId}`;
     return url;
   };
+
+  const getTextAdUrl = (list: EmailList) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/api/email/text-ad?property=${list.slug}&send=${selectedEsp.sendTag}&sub=${selectedEsp.subTag}&sub1=${selectedEsp.sub1Tag}&esp=${selectedEsp.name.toLowerCase()}`;
+  };
+
+  const hasTextAds = embedAds.some(a => a.isActive && a.adType === 'text');
+  const hasImageAds = embedAds.some(a => a.isActive && (a.adType === 'image' || !a.adType));
 
   const getEmbedHtml = (list: EmailList) => {
     const imageUrl = getImageUrl(list);
@@ -485,7 +500,8 @@ export default function EmailAds() {
                       {embedAds.filter(a => a.isActive).map((ad, index) => (
                         <li key={ad.id} className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">{index + 1}</Badge>
-                          {ad.title}
+                          <Badge variant="secondary" className="text-[10px]">{ad.adType === 'text' ? 'Text' : 'Image'}</Badge>
+                          {ad.title || ad.name}
                         </li>
                       ))}
                     </ul>
@@ -495,130 +511,215 @@ export default function EmailAds() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Image URL</Label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => copyToClipboard(getImageUrl(embedList), 'imageUrl')}
-                  >
-                    {copiedField === 'imageUrl' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <code className="text-xs break-all">{getImageUrl(embedList)}</code>
-                </div>
-              </div>
+              {hasImageAds && (
+                <>
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <Badge>Image Ads</Badge>
+                    </h3>
+                  </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Click Tracking URL</Label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => copyToClipboard(getClickUrl(embedList), 'clickUrl')}
-                  >
-                    {copiedField === 'clickUrl' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <code className="text-xs break-all">{getClickUrl(embedList)}</code>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="space-y-0.5">
-                  <Label>Card Style</Label>
-                  <p className="text-xs text-muted-foreground">Wrap ad in a card container with border</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant={useCardStyle ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setUseCardStyle(true)}
-                  >
-                    Card
-                  </Button>
-                  <Button
-                    variant={!useCardStyle ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setUseCardStyle(false)}
-                  >
-                    Plain
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Complete HTML Embed Code</Label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => copyToClipboard(getEmbedHtml(embedList), 'embedHtml')}
-                  >
-                    {copiedField === 'embedHtml' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <pre className="text-xs whitespace-pre-wrap overflow-x-auto">{getEmbedHtml(embedList)}</pre>
-                </div>
-              </div>
-
-              {/* Email Ad Preview */}
-              <div className="space-y-2">
-                <Label>Email Ad Preview</Label>
-                <div className="border rounded-lg p-4 bg-gray-100">
-                  {embedAds.filter(a => a.isActive).length > 0 ? (
-                    <div style={{ maxWidth: embedList.defaultWidth + (useCardStyle ? 32 : 0) }} className="mx-auto">
-                      <div 
-                        className="space-y-3"
-                        style={useCardStyle ? { 
-                          backgroundColor: '#f8f9fa', 
-                          border: '1px solid #e9ecef', 
-                          borderRadius: '8px', 
-                          padding: '16px' 
-                        } : {}}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Image URL</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => copyToClipboard(getImageUrl(embedList), 'imageUrl')}
                       >
-                        <img 
-                          src={embedAds.find(a => a.isActive)?.imageUrl || ""} 
-                          alt="Preview" 
-                          style={{ 
-                            width: '100%', 
-                            height: 'auto', 
-                            display: 'block',
-                            borderRadius: useCardStyle ? '4px' : '0'
-                          }}
-                        />
-                        <p className="text-sm font-medium text-center">
-                          {embedAds.find(a => a.isActive)?.title || "Ad Title"}
-                        </p>
-                        <div className="text-center">
-                          <div 
-                            className="inline-block py-3 px-10 text-white font-bold rounded cursor-pointer"
-                            style={{ backgroundColor: embedAds.find(a => a.isActive)?.buttonColor || "#4CAF50" }}
-                          >
-                            {embedAds.find(a => a.isActive)?.buttonText || "CONTINUE"}
-                          </div>
-                        </div>
-                      </div>
+                        {copiedField === 'imageUrl' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">No active ads to preview</p>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">Note: Template variables like {selectedEsp.sendTag} will show as-is until processed by your ESP.</p>
-              </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <code className="text-xs break-all">{getImageUrl(embedList)}</code>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Click Tracking URL</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => copyToClipboard(getClickUrl(embedList), 'clickUrl')}
+                      >
+                        {copiedField === 'clickUrl' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <code className="text-xs break-all">{getClickUrl(embedList)}</code>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label>Card Style</Label>
+                      <p className="text-xs text-muted-foreground">Wrap ad in a card container with border</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={useCardStyle ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setUseCardStyle(true)}
+                      >
+                        Card
+                      </Button>
+                      <Button
+                        variant={!useCardStyle ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setUseCardStyle(false)}
+                      >
+                        Plain
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Complete HTML Embed Code</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => copyToClipboard(getEmbedHtml(embedList), 'embedHtml')}
+                      >
+                        {copiedField === 'embedHtml' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <pre className="text-xs whitespace-pre-wrap overflow-x-auto">{getEmbedHtml(embedList)}</pre>
+                    </div>
+                  </div>
+
+                  {/* Image Ad Preview */}
+                  <div className="space-y-2">
+                    <Label>Image Ad Preview</Label>
+                    <div className="border rounded-lg p-4 bg-gray-100">
+                      {(() => {
+                        const activeImageAd = embedAds.find(a => a.isActive && (a.adType === 'image' || !a.adType));
+                        return activeImageAd ? (
+                          <div style={{ maxWidth: embedList.defaultWidth + (useCardStyle ? 32 : 0) }} className="mx-auto">
+                            <div 
+                              className="space-y-3"
+                              style={useCardStyle ? { 
+                                backgroundColor: '#f8f9fa', 
+                                border: '1px solid #e9ecef', 
+                                borderRadius: '8px', 
+                                padding: '16px' 
+                              } : {}}
+                            >
+                              <img 
+                                src={activeImageAd.imageUrl || ""} 
+                                alt="Preview" 
+                                style={{ 
+                                  width: '100%', 
+                                  height: 'auto', 
+                                  display: 'block',
+                                  borderRadius: useCardStyle ? '4px' : '0'
+                                }}
+                              />
+                              <p className="text-sm font-medium text-center">
+                                {activeImageAd.title || "Ad Title"}
+                              </p>
+                              <div className="text-center">
+                                <div 
+                                  className="inline-block py-3 px-10 text-white font-bold rounded cursor-pointer"
+                                  style={{ backgroundColor: activeImageAd.buttonColor || "#4CAF50" }}
+                                >
+                                  {activeImageAd.buttonText || "CONTINUE"}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">No active image ads to preview</p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {hasTextAds && (
+                <>
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <Badge variant="secondary">Text Ads</Badge>
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Text Ad URL</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => copyToClipboard(getTextAdUrl(embedList), 'textAdUrl')}
+                      >
+                        {copiedField === 'textAdUrl' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <code className="text-xs break-all">{getTextAdUrl(embedList)}</code>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Paste this URL into your email template. It returns HTML content that renders as native text in the email.</p>
+                  </div>
+
+                  {/* Text Ad Preview */}
+                  <div className="space-y-2">
+                    <Label>Text Ad Preview</Label>
+                    <div className="border rounded-lg p-4 bg-white">
+                      {(() => {
+                        const activeTextAd = embedAds.find(a => a.isActive && a.adType === 'text');
+                        if (!activeTextAd) return <p className="text-sm text-muted-foreground text-center py-4">No active text ads to preview</p>;
+                        return (
+                          <div style={{ maxWidth: 600, fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                            <div 
+                              style={{ 
+                                fontSize: activeTextAd.fontSize || 14, 
+                                lineHeight: 1.6, 
+                                color: activeTextAd.textColor || '#333333',
+                                whiteSpace: 'pre-wrap'
+                              }}
+                            >
+                              {(activeTextAd.bodyHtml || '').split(/\[([^\]]+)\]\(([^)]+)\)/).map((part: string, i: number) => {
+                                if (i % 3 === 1) return <a key={i} href="#" style={{ color: activeTextAd.linkColor || '#0066cc', textDecoration: 'underline', fontWeight: 600 }} onClick={(e) => e.preventDefault()}>{part}</a>;
+                                if (i % 3 === 2) return null;
+                                return <span key={i}>{part}</span>;
+                              })}
+                            </div>
+                            {activeTextAd.ctaText && (
+                              <div style={{ paddingTop: 12 }}>
+                                <a href="#" style={{ color: activeTextAd.linkColor || '#0066cc', textDecoration: 'underline', fontWeight: 600, fontSize: activeTextAd.fontSize || 14 }} onClick={(e) => e.preventDefault()}>
+                                  {activeTextAd.ctaText}
+                                </a>
+                              </div>
+                            )}
+                            {activeTextAd.buttonText && (
+                              <div style={{ paddingTop: 16, textAlign: 'center' }}>
+                                <span style={{ display: 'inline-block', backgroundColor: activeTextAd.buttonColor || '#4CAF50', color: '#fff', fontWeight: 'bold', padding: '12px 40px', borderRadius: 4, fontSize: 16 }}>
+                                  {activeTextAd.buttonText}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <p className="text-xs text-muted-foreground">Note: Template variables like {selectedEsp.sendTag} will show as-is until processed by your ESP.</p>
 
               <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">How it works</h4>
                 <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                  <li>• The image URL rotates through your active ads on each email open</li>
-                  <li>• Impressions are tracked when the image loads</li>
+                  <li>• <strong>Image ads:</strong> The image URL rotates through active ads on each email open</li>
+                  <li>• <strong>Text ads:</strong> The URL returns live HTML content that renders as native email text</li>
+                  <li>• Impressions are tracked automatically</li>
                   <li>• Clicks are tracked and redirected to the Tune offer</li>
                   <li>• ESP merge tags are passed through for attribution</li>
-                  <li>• Button uses bulletproof email tables for Outlook compatibility</li>
+                  <li>• Change text/links in the dashboard anytime - next email open gets the update</li>
                 </ul>
               </div>
             </div>

@@ -2184,6 +2184,123 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
     }
   });
 
+  // Serve text ad as email-safe HTML (for text-based email ad units)
+  app.get('/api/email/text-ad', async (req, res) => {
+    try {
+      const { property, send, sub, sub1, esp } = req.query;
+      
+      if (!property) {
+        return res.status(400).send('Missing property parameter');
+      }
+      
+      const list = await storage.getEmailListBySlug(property as string);
+      if (!list || !list.isActive) {
+        return res.status(404).send('List not found');
+      }
+      
+      const ad = await storage.getNextRotatingEmailAd(list.id);
+      if (!ad || ad.adType !== 'text') {
+        return res.status(404).send('No active text ads');
+      }
+      
+      await storage.incrementEmailAdImpressions(ad.id);
+      await storage.recordEmailAdImpression({
+        adId: ad.id,
+        listId: list.id,
+        sendId: send as string,
+        sub: sub as string,
+        sub1: sub1 as string,
+        esp: esp as string,
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      });
+      
+      const trackingDomain = ad.trackingDomain || 'track.modemobile.com';
+      let clickUrl = `https://${trackingDomain}/aff_c?offer_id=${ad.tuneOfferId}&aff_id=${ad.affiliateId}`;
+      if (sub) clickUrl += `&aff_sub=${encodeURIComponent(sub as string)}`;
+      if (sub1) clickUrl += `&aff_sub2=${encodeURIComponent(sub1 as string)}`;
+      if (send) clickUrl += `&aff_sub3=${encodeURIComponent(send as string)}`;
+      if (esp) clickUrl += `&aff_sub4=${encodeURIComponent(esp as string)}`;
+      
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      let trackClickUrl = `${baseUrl}/api/email/click?property=${encodeURIComponent(property as string)}&ad=${ad.id}`;
+      if (send) trackClickUrl += `&send=${encodeURIComponent(send as string)}`;
+      if (sub) trackClickUrl += `&sub=${encodeURIComponent(sub as string)}`;
+      if (sub1) trackClickUrl += `&sub1=${encodeURIComponent(sub1 as string)}`;
+      if (esp) trackClickUrl += `&esp=${encodeURIComponent(esp as string)}`;
+      
+      const fontSize = ad.fontSize || 14;
+      const textColor = ad.textColor || '#333333';
+      const linkColor = ad.linkColor || '#0066cc';
+      const buttonColor = ad.buttonColor || '#4CAF50';
+      const buttonText = ad.buttonText || 'CONTINUE';
+      const ctaText = ad.ctaText || '';
+      
+      let bodyContent = (ad.bodyHtml || '').replace(/\n/g, '<br>');
+      bodyContent = bodyContent.replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        `<a href="${trackClickUrl}" style="color:${linkColor};text-decoration:underline;font-weight:600" target="_blank">$1</a>`
+      );
+      
+      let ctaRow = '';
+      if (ctaText) {
+        ctaRow = `<tr><td style="padding:12px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:${fontSize}px;line-height:1.6;color:${textColor}"><a href="${trackClickUrl}" style="color:${linkColor};text-decoration:underline;font-weight:600" target="_blank">${ctaText}</a></td></tr>`;
+      }
+      
+      let buttonRow = '';
+      if (buttonText) {
+        buttonRow = `<tr><td align="center" style="padding:16px 0 4px"><!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${trackClickUrl}" style="height:44px;v-text-anchor:middle;width:220px" arcsize="10%" stroke="f" fillcolor="${buttonColor}"><w:anchorlock/><center style="color:#fff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold">${buttonText}</center></v:roundrect><![endif]--><!--[if !mso]><!--><a href="${trackClickUrl}" target="_blank" style="display:inline-block;background-color:${buttonColor};color:#fff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 40px;border-radius:4px;text-align:center">${buttonText}</a><!--<![endif]--></td></tr>`;
+      }
+      
+      const html = `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:${fontSize}px;line-height:1.6;color:${textColor};padding:0">${bodyContent}</td></tr>${ctaRow}${buttonRow}</table>`;
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.send(html);
+    } catch (error) {
+      console.error("Error serving text ad:", error);
+      res.status(500).send('Error');
+    }
+  });
+
+  // Get text ad data as JSON (for preview and embed code generation)
+  app.get('/api/email/text-ad/:listSlug', async (req, res) => {
+    try {
+      const list = await storage.getEmailListBySlug(req.params.listSlug);
+      if (!list || !list.isActive) {
+        return res.status(404).json({ message: "List not found" });
+      }
+      
+      const activeAds = await storage.getActiveEmailAdsByListOrdered(list.id);
+      const textAds = activeAds.filter(a => a.adType === 'text');
+      
+      if (textAds.length === 0) {
+        return res.status(404).json({ message: "No active text ads" });
+      }
+      
+      const ad = textAds[0];
+      const trackingDomain = ad.trackingDomain || 'track.modemobile.com';
+      const clickUrl = `https://${trackingDomain}/aff_c?offer_id=${ad.tuneOfferId}&aff_id=${ad.affiliateId}`;
+      
+      res.json({
+        id: ad.id,
+        title: ad.title,
+        bodyHtml: ad.bodyHtml,
+        ctaText: ad.ctaText,
+        buttonText: ad.buttonText,
+        buttonColor: ad.buttonColor,
+        linkColor: ad.linkColor,
+        textColor: ad.textColor,
+        fontSize: ad.fontSize,
+        clickUrl,
+        listSlug: list.slug,
+      });
+    } catch (error) {
+      console.error("Error fetching text ad:", error);
+      res.status(500).json({ message: "Failed to fetch text ad" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
