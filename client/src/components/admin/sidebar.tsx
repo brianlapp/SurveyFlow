@@ -14,7 +14,8 @@ import {
   BookOpen,
   Send,
   Gift,
-  Mail
+  Mail,
+  LineChart
 } from "lucide-react";
 
 const navigation = [
@@ -25,6 +26,7 @@ const navigation = [
   { name: "TY Pages", href: "/admin/ty-brands", icon: Gift },
   { name: "Email House Ads", href: "/admin/email-ads", icon: Mail },
   { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
+  { name: "Ad Revenue (MMM)", href: "/admin/mmm", icon: LineChart },
   { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { name: "Postbacks", href: "/admin/postbacks", icon: Send },
   { name: "Documentation", href: "/admin/docs", icon: BookOpen },

@@ -1,0 +1,66 @@
+This is an existing Replit project — an offer management dashboard already in production. You're adding a new feature to it: the ModeMarketMunchies (MMM) Ad Revenue Intelligence Pipeline.
+
+I've uploaded a folder called `mmm-pipeline-package` containing a Python pipeline codebase that was built by a previous developer and ran locally on a Windows PC. It has bugs and isn't set up for Replit. Your job is to integrate it into this project, fix it, and extend it.
+
+**Look at the existing project first.** Understand the structure, stack, and Postgres database before touching anything. Fit the pipeline in cleanly — don't break what's already working.
+
+---
+
+## What the pipeline does
+
+On a daily schedule it:
+1. Pulls **ad spend** from Meta Ads API and reads Google/Taboola spend from a Google Sheet
+2. Scrapes **revenue** from 4 affiliate portals using headless Playwright: IMS/Tiburon, AfterOffers, Interactive Offers, Zenect (no public APIs exist for these — Playwright is the only option)
+3. Joins spend ↔ revenue per creative using a compound key (`utm_source-utm_medium`)
+4. Computes ROAS per creative and stores everything in Postgres
+5. Displays results in a dashboard
+
+---
+
+## What needs to happen
+
+### 1. Clean up the code structure
+The uploaded files are all flat in one folder. Reorganize them into a logical structure that fits the existing project. Fix the broken imports — `run_daily.py` references submodule paths that don't exist in the flat layout.
+
+### 2. Move credentials to Replit Secrets
+All scripts currently read from a local `credentials.json` file. Replace that with environment variables using Replit Secrets. The secrets needed are: Meta API token + ad account ID, credentials for each of the 4 scrapers (username/password/URL), Google service account JSON (store as a single secret string), Google spreadsheet ID, Anthropic API key. Use the existing project's Secrets pattern.
+
+### 3. Migrate from SQLite to Postgres
+The pipeline uses SQLite which gets wiped between Replit runs. Migrate `database.py` to use the existing project's Postgres database — just add the pipeline's tables. The key tables are: spend per creative per day (Meta + Google + Taboola), revenue per creative per day (from each of the 4 scrapers), and a run log. The core join logic that merges spend ↔ revenue on compound_key is solid — keep it, just translate to Postgres syntax.
+
+### 4. Fix these 4 bugs
+
+- **IMS date filter**: The scraper filters rows by matching a date string but doesn't normalize zero-padding, so "4/30" never matches "04/30" and silently returns zero rows. Fix the comparison so dates match regardless of zero-padding.
+- **AfterOffers timezone**: The scraper calculates "yesterday" using GMT instead of EST (America/New_York), attributing revenue to the wrong date. Pin it to Eastern time.
+- **Broken imports**: Once the folder structure is fixed, verify all imports in `run_daily.py` resolve correctly.
+- **Stale Claude model**: The AI daily summary uses an old model ID. Update to `claude-sonnet-4-6`.
+
+### 5. Add Google Ads API (new — not in original code)
+The original pipeline only had Meta spend. Add a Google Ads puller that fetches yesterday's spend at the creative/ad level, extracts `utm_source` and `utm_medium` from the ad destination URLs (same pattern as the Meta puller already does), and stores it alongside Meta spend. Credentials will be added to Secrets once we have them from the client.
+
+### 6. Set up Playwright on Replit
+All 4 revenue scrapers use headless Chromium via Playwright. Install the required system dependencies and make sure `playwright install chromium` runs as part of setup. If a portal blocks Replit's datacenter IP, log it and continue — don't crash the whole pipeline.
+
+### 7. Add pipeline section to the existing dashboard
+Add new pages to the existing dashboard UI (don't build a separate app). Match the existing style. The pipeline section needs:
+- A performance table: last 30 days, one row per creative, showing spend / revenue / ROAS — color-coded by ROAS health
+- A creative detail view: spend vs revenue over time, broken down by revenue source
+- A status page: last run time per scraper, recent errors, and a "Run Now" button
+
+### 8. Scheduling
+Set up two scheduled jobs (Replit Scheduled Deployments):
+- Daily run at 9am EST
+- Intraday refresh every 2 hours
+
+---
+
+## Definition of done
+
+- Daily pipeline runs end-to-end without crashing (Meta pull may return empty until token is restored — that's expected, not a failure)
+- All 4 Playwright scrapers log in and return data headless
+- Google Ads puller is wired in (can return empty until credentials are provided)
+- IMS and AfterOffers bugs are fixed and verified
+- Data persists in Postgres across separate runs
+- Pipeline dashboard section is live in the existing UI with real data
+- All credentials are in Secrets, nothing hardcoded
+- Both scheduled jobs are configured

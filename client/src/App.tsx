@@ -25,6 +25,7 @@ import TySurveys from "@/pages/admin/ty-surveys";
 import TySurveyQuestions from "@/pages/admin/ty-survey-questions";
 import EmailAds from "@/pages/admin/email-ads";
 import EmailAdsList from "@/pages/admin/email-ads-list";
+import Mmm from "@/pages/admin/mmm";
 import Register from "@/pages/user/register";
 import Survey from "@/pages/user/survey";
 import GiveawayLanding from "@/pages/user/giveaway-landing";
@@ -86,6 +87,7 @@ function Router() {
             <Route path="/admin/ty-surveys/:surveyId/questions" component={TySurveyQuestions} />
             <Route path="/admin/email-ads" component={EmailAds} />
             <Route path="/admin/email-ads/:listId/ads" component={EmailAdsList} />
+            <Route path="/admin/mmm" component={Mmm} />
             <Route component={NotFound} />
           </Switch>
         </AdminLayout>

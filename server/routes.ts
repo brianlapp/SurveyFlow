@@ -8,6 +8,8 @@ import { revenueTracker } from "./services/revenueTracker";
 import { openaiService } from "./services/openaiService";
 import { randomUUID } from "crypto";
 import { z } from "zod";
+import { spawn } from "child_process";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -2341,6 +2343,91 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
     } catch (error) {
       console.error("Error fetching text ad:", error);
       res.status(500).json({ message: "Failed to fetch text ad" });
+    }
+  });
+
+  // ===========================================================================
+  // MMM Ad Revenue Intelligence
+  // Read the joined snapshot written by the Python pipeline + trigger runs.
+  // ===========================================================================
+  const parseDays = (raw: unknown, fallback: number) => {
+    const n = parseInt(String(raw ?? ""), 10);
+    if (Number.isNaN(n) || n < 1) return fallback;
+    return Math.min(n, 365);
+  };
+
+  app.get('/api/mmm/performance', isAuthenticated, async (req, res) => {
+    try {
+      const days = parseDays(req.query.days, 30);
+      const [creatives, dailyTotals] = await Promise.all([
+        storage.getMmmCreativePerformance(days),
+        storage.getMmmDailyTotals(days),
+      ]);
+      res.json({ days, creatives, dailyTotals });
+    } catch (error) {
+      console.error("Error fetching MMM performance:", error);
+      res.status(500).json({ message: "Failed to fetch MMM performance" });
+    }
+  });
+
+  app.get('/api/mmm/creative/:key', isAuthenticated, async (req, res) => {
+    try {
+      const days = parseDays(req.query.days, 90);
+      const detail = await storage.getMmmCreativeDetail(req.params.key, days);
+      res.json({ compoundKey: req.params.key, days, detail });
+    } catch (error) {
+      console.error("Error fetching MMM creative detail:", error);
+      res.status(500).json({ message: "Failed to fetch MMM creative detail" });
+    }
+  });
+
+  app.get('/api/mmm/runs', isAuthenticated, async (req, res) => {
+    try {
+      const limit = parseDays(req.query.limit, 50);
+      const [runs, latest] = await Promise.all([
+        storage.getMmmRuns(limit),
+        storage.getMmmLatestRun(),
+      ]);
+      res.json({ runs, latest });
+    } catch (error) {
+      console.error("Error fetching MMM runs:", error);
+      res.status(500).json({ message: "Failed to fetch MMM runs" });
+    }
+  });
+
+  const MMM_RUN_STALE_MS = 30 * 60 * 1000; // a "running" row older than this is stale
+
+  app.post('/api/mmm/run', isAuthenticated, async (_req, res) => {
+    try {
+      // Refuse a second run only while one is genuinely in progress. A row can
+      // get stuck in "running" if the detached child is killed (deploy restart,
+      // OOM) before finish_run_log fires — treat such stale rows as finished so
+      // Run Now is never permanently bricked.
+      const latest = await storage.getMmmLatestRun();
+      if (latest && latest.status === "running") {
+        const startedMs = latest.startedAt ? new Date(latest.startedAt).getTime() : 0;
+        const isFresh = startedMs > 0 && Date.now() - startedMs < MMM_RUN_STALE_MS;
+        if (isFresh) {
+          return res.status(409).json({ message: "A pipeline run is already in progress" });
+        }
+      }
+
+      const pkgDir = path.join(process.cwd(), "mmm-pipeline-package");
+      const child = spawn("python3", ["pipeline/run_intraday.py"], {
+        cwd: pkgDir,
+        detached: true,
+        stdio: "ignore",
+        env: process.env,
+      });
+      child.on("error", (err) => {
+        console.error("Failed to spawn MMM intraday run:", err);
+      });
+      child.unref();
+
+      res.status(202).json({ message: "Intraday pipeline run started" });
+    } catch (error) {
+      console.error("Error triggering MMM run:", error);
+      res.status(500).json({ message: "Failed to trigger MMM run" });
     }
   });
 

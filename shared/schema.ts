@@ -8,6 +8,8 @@ import {
   text,
   integer,
   decimal,
+  doublePrecision,
+  serial,
   boolean,
   uuid,
   date,
@@ -622,3 +624,128 @@ export type EmailAd = typeof emailAds.$inferSelect;
 export type InsertEmailAd = z.infer<typeof insertEmailAdSchema>;
 export type EmailAdImpression = typeof emailAdImpressions.$inferSelect;
 export type EmailAdClick = typeof emailAdClicks.$inferSelect;
+
+// ===========================================================================
+// MMM Ad Revenue Intelligence Pipeline
+// Raw source tables + joined performance snapshot + run log.
+// Rows are written by the Python pipeline (via psycopg2 using DATABASE_URL);
+// the Node app only reads from these tables. Schema is owned here (Drizzle).
+// ===========================================================================
+
+// Creative-level ad spend (Meta + Google). Platform column keeps them distinct.
+export const mmmAdSpend = pgTable("mmm_ad_spend", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  platform: varchar("platform", { length: 20 }).notNull().default("Meta"),
+  adId: varchar("ad_id", { length: 64 }),
+  adName: text("ad_name"),
+  campaignId: varchar("campaign_id", { length: 64 }),
+  campaignName: text("campaign_name"),
+  affId: varchar("aff_id", { length: 128 }),
+  affSub: varchar("aff_sub", { length: 128 }),
+  compoundKey: varchar("compound_key", { length: 255 }),
+  spend: doublePrecision("spend").notNull().default(0),
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
+  linkClicks: integer("link_clicks").notNull().default(0),
+  cpm: doublePrecision("cpm").notNull().default(0),
+  ctr: doublePrecision("ctr").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [index("idx_mmm_ad_spend_date_key").on(t.date, t.compoundKey)]);
+
+// IMS (TMG) revenue keyed on affId-subId compound key.
+export const mmmImsRevenue = pgTable("mmm_ims_revenue", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  affId: varchar("aff_id", { length: 128 }),
+  subId: varchar("sub_id", { length: 128 }),
+  compoundKey: varchar("compound_key", { length: 255 }),
+  revenue: doublePrecision("revenue").notNull().default(0),
+  ecpm: doublePrecision("ecpm").notNull().default(0),
+  impressions: integer("impressions").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [index("idx_mmm_ims_date_key").on(t.date, t.compoundKey)]);
+
+// AfterOffers revenue keyed on utm_source-utm_medium compound key.
+export const mmmAoRevenue = pgTable("mmm_ao_revenue", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  utmSource: varchar("utm_source", { length: 255 }),
+  utmMedium: varchar("utm_medium", { length: 255 }),
+  compoundKey: varchar("compound_key", { length: 255 }),
+  revenue: doublePrecision("revenue").notNull().default(0),
+  epi: doublePrecision("epi").notNull().default(0),
+  signups: integer("signups").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [index("idx_mmm_ao_date_key").on(t.date, t.compoundKey)]);
+
+// Day-level Google + Taboola spend read from the shared Google Sheet.
+export const mmmDailySpend = pgTable("mmm_daily_spend", {
+  date: date("date").primaryKey(),
+  googleSpend: doublePrecision("google_spend").notNull().default(0),
+  taboolaSpend: doublePrecision("taboola_spend").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Day-level gross revenue by source (Interactive Offers, Zenect, etc.).
+export const mmmSourceDaily = pgTable("mmm_source_daily", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  source: varchar("source", { length: 40 }).notNull(),
+  revenue: doublePrecision("revenue").notNull().default(0),
+  leads: integer("leads").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [uniqueIndex("uq_mmm_source_daily").on(t.date, t.source)]);
+
+// Joined per-creative performance snapshot (post-fallback, post-allocation).
+// This is the table the dashboard reads for the performance table + detail view.
+export const mmmPerformanceDaily = pgTable("mmm_performance_daily", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  compoundKey: varchar("compound_key", { length: 255 }).notNull(),
+  platform: varchar("platform", { length: 20 }).notNull().default("Other"),
+  adName: text("ad_name"),
+  campaignName: text("campaign_name"),
+  spend: doublePrecision("spend").notNull().default(0),
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
+  imsRevenue: doublePrecision("ims_revenue").notNull().default(0),
+  imsImpressions: integer("ims_impressions").notNull().default(0),
+  aoRevenue: doublePrecision("ao_revenue").notNull().default(0),
+  aoSignups: integer("ao_signups").notNull().default(0),
+  totalRevenue: doublePrecision("total_revenue").notNull().default(0),
+  grossAllocated: doublePrecision("gross_allocated").notNull().default(0),
+  adjustedRevenue: doublePrecision("adjusted_revenue").notNull().default(0),
+  day0Roas: doublePrecision("day0_roas"),
+  adjustedRoas: doublePrecision("adjusted_roas"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [uniqueIndex("uq_mmm_perf_date_key").on(t.date, t.compoundKey)]);
+
+// Pipeline run log — one row per run (daily/intraday), for the status page.
+export const mmmRunLog = pgTable("mmm_run_log", {
+  id: serial("id").primaryKey(),
+  runType: varchar("run_type", { length: 20 }).notNull().default("daily"),
+  runDate: date("run_date").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("running"),
+  startedAt: timestamp("started_at").defaultNow(),
+  finishedAt: timestamp("finished_at"),
+  metaRows: integer("meta_rows").notNull().default(0),
+  googleRows: integer("google_rows").notNull().default(0),
+  imsRows: integer("ims_rows").notNull().default(0),
+  aoRows: integer("ao_rows").notNull().default(0),
+  joinedRows: integer("joined_rows").notNull().default(0),
+  totalSpend: doublePrecision("total_spend").notNull().default(0),
+  combinedRevenue: doublePrecision("combined_revenue").notNull().default(0),
+  sources: jsonb("sources"),
+  errors: jsonb("errors"),
+  aiSummary: text("ai_summary"),
+});
+
+// MMM select types (Node reads only; Python owns writes)
+export type MmmAdSpend = typeof mmmAdSpend.$inferSelect;
+export type MmmImsRevenue = typeof mmmImsRevenue.$inferSelect;
+export type MmmAoRevenue = typeof mmmAoRevenue.$inferSelect;
+export type MmmDailySpend = typeof mmmDailySpend.$inferSelect;
+export type MmmSourceDaily = typeof mmmSourceDaily.$inferSelect;
+export type MmmPerformanceDaily = typeof mmmPerformanceDaily.$inferSelect;
+export type MmmRunLog = typeof mmmRunLog.$inferSelect;

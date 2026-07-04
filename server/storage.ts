@@ -55,8 +55,48 @@ import {
   type EmailAdImpression,
   type EmailAdClick,
 } from "@shared/schema";
+import {
+  mmmPerformanceDaily,
+  mmmAdSpend,
+  mmmDailySpend,
+  mmmSourceDaily,
+  mmmRunLog,
+} from "@shared/schema";
+import type { MmmRunLog, MmmPerformanceDaily } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, sum, count, avg } from "drizzle-orm";
+
+// Shapes returned by the MMM (ad revenue intelligence) read methods.
+export type MmmCreativeRow = {
+  compoundKey: string;
+  platform: string;
+  adName: string | null;
+  campaignName: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  imsRevenue: number;
+  aoRevenue: number;
+  totalRevenue: number;
+  adjustedRevenue: number;
+  day0Roas: number | null;
+  adjustedRoas: number | null;
+  activeDays: number;
+};
+
+export type MmmDailyTotal = {
+  date: string;
+  creativeSpend: number;
+  googleSpend: number;
+  taboolaSpend: number;
+  totalSpend: number;
+  creativeRevenue: number;
+  sourceRevenue: number;
+  combinedRevenue: number;
+  adjustedRevenue: number;
+  roas: number | null;
+  adjustedRoas: number | null;
+};
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -201,6 +241,13 @@ export interface IStorage {
   // Email Ad Tracking operations
   recordEmailAdImpression(data: { adId: string; listId: string; sendId?: string; sub?: string; sub1?: string; esp?: string; ipAddress?: string; userAgent?: string }): Promise<EmailAdImpression>;
   recordEmailAdClick(data: { adId: string; listId: string; sendId?: string; sub?: string; sub1?: string; esp?: string; ipAddress?: string; userAgent?: string }): Promise<EmailAdClick>;
+
+  // MMM Ad Revenue Intelligence (read-only; Python pipeline owns writes)
+  getMmmCreativePerformance(days: number): Promise<MmmCreativeRow[]>;
+  getMmmCreativeDetail(compoundKey: string, days: number): Promise<MmmPerformanceDaily[]>;
+  getMmmDailyTotals(days: number): Promise<MmmDailyTotal[]>;
+  getMmmRuns(limit: number): Promise<MmmRunLog[]>;
+  getMmmLatestRun(): Promise<MmmRunLog | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1148,6 +1195,189 @@ export class DatabaseStorage implements IStorage {
       .set({ totalClicks: sql`${emailLists.totalClicks} + 1` })
       .where(eq(emailLists.id, data.listId));
     return click;
+  }
+
+  // === MMM Ad Revenue Intelligence (read-only) ===
+  // The Python pipeline owns all writes to the mmm_* tables via psycopg2.
+  // These methods only read the joined snapshot for the dashboard.
+
+  private mmmCutoff(days: number): string {
+    // Align the window to the pipeline's timezone (America/New_York) so day
+    // boundaries match the dates the Python pipeline writes.
+    const estToday = new Date().toLocaleDateString("en-CA", {
+      timeZone: "America/New_York",
+    });
+    const d = new Date(`${estToday}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - Math.max(0, days - 1));
+    return d.toISOString().slice(0, 10);
+  }
+
+  async getMmmCreativePerformance(days: number): Promise<MmmCreativeRow[]> {
+    const cutoff = this.mmmCutoff(days);
+    const rows = await db
+      .select({
+        compoundKey: mmmPerformanceDaily.compoundKey,
+        platform: sql<string>`max(${mmmPerformanceDaily.platform})`,
+        adName: sql<string | null>`max(${mmmPerformanceDaily.adName})`,
+        campaignName: sql<string | null>`max(${mmmPerformanceDaily.campaignName})`,
+        spend: sql<number>`coalesce(sum(${mmmPerformanceDaily.spend}), 0)`,
+        impressions: sql<number>`coalesce(sum(${mmmPerformanceDaily.impressions}), 0)`,
+        clicks: sql<number>`coalesce(sum(${mmmPerformanceDaily.clicks}), 0)`,
+        imsRevenue: sql<number>`coalesce(sum(${mmmPerformanceDaily.imsRevenue}), 0)`,
+        aoRevenue: sql<number>`coalesce(sum(${mmmPerformanceDaily.aoRevenue}), 0)`,
+        totalRevenue: sql<number>`coalesce(sum(${mmmPerformanceDaily.totalRevenue}), 0)`,
+        adjustedRevenue: sql<number>`coalesce(sum(${mmmPerformanceDaily.adjustedRevenue}), 0)`,
+        activeDays: sql<number>`count(distinct ${mmmPerformanceDaily.date})`,
+      })
+      .from(mmmPerformanceDaily)
+      .where(gte(mmmPerformanceDaily.date, cutoff))
+      .groupBy(mmmPerformanceDaily.compoundKey)
+      .orderBy(desc(sql`sum(${mmmPerformanceDaily.spend})`));
+
+    return rows.map((r) => {
+      const spend = Number(r.spend) || 0;
+      const totalRevenue = Number(r.totalRevenue) || 0;
+      const adjustedRevenue = Number(r.adjustedRevenue) || 0;
+      return {
+        compoundKey: r.compoundKey,
+        platform: r.platform ?? "Other",
+        adName: r.adName ?? null,
+        campaignName: r.campaignName ?? null,
+        spend,
+        impressions: Number(r.impressions) || 0,
+        clicks: Number(r.clicks) || 0,
+        imsRevenue: Number(r.imsRevenue) || 0,
+        aoRevenue: Number(r.aoRevenue) || 0,
+        totalRevenue,
+        adjustedRevenue,
+        day0Roas: spend > 0 ? totalRevenue / spend : null,
+        adjustedRoas: spend > 0 ? adjustedRevenue / spend : null,
+        activeDays: Number(r.activeDays) || 0,
+      };
+    });
+  }
+
+  async getMmmCreativeDetail(compoundKey: string, days: number): Promise<MmmPerformanceDaily[]> {
+    const cutoff = this.mmmCutoff(days);
+    return db
+      .select()
+      .from(mmmPerformanceDaily)
+      .where(
+        and(
+          eq(mmmPerformanceDaily.compoundKey, compoundKey),
+          gte(mmmPerformanceDaily.date, cutoff),
+        ),
+      )
+      .orderBy(mmmPerformanceDaily.date);
+  }
+
+  async getMmmDailyTotals(days: number): Promise<MmmDailyTotal[]> {
+    const cutoff = this.mmmCutoff(days);
+
+    // Day-level ad-platform spend comes from the RAW ingestion table
+    // (mmm_ad_spend: Meta + creative-level Google only). We deliberately do NOT
+    // sum mmm_performance_daily.spend here: the pipeline allocates sheet
+    // Google/Taboola spend into those creative rows, so summing them and then
+    // adding mmm_daily_spend would double-count the same dollars. mmm_ad_spend
+    // never contains allocated sheet spend, so raw ad spend + precedence-adjusted
+    // sheet spend (mmm_daily_spend) gives the true, single-counted day total.
+    const adSpendByDay = await db
+      .select({
+        date: mmmAdSpend.date,
+        adSpend: sql<number>`coalesce(sum(${mmmAdSpend.spend}), 0)`,
+      })
+      .from(mmmAdSpend)
+      .where(gte(mmmAdSpend.date, cutoff))
+      .groupBy(mmmAdSpend.date);
+
+    // Revenue: total_revenue = IMS + AO (attributed, excludes gross sources).
+    // At the DAY level, adjusted revenue (attributed + allocated gross) is
+    // exactly attributed + gross source revenue, so we derive it as
+    // combinedRevenue below rather than summing mmm_performance_daily.adjusted_
+    // revenue. Summing the per-row allocated values would silently DROP the whole
+    // gross_total on any day the allocation didn't fire (e.g. IMS impressions are
+    // zero because IMS creds/scrape are absent — an explicitly supported state).
+    const perfByDay = await db
+      .select({
+        date: mmmPerformanceDaily.date,
+        creativeRevenue: sql<number>`coalesce(sum(${mmmPerformanceDaily.totalRevenue}), 0)`,
+      })
+      .from(mmmPerformanceDaily)
+      .where(gte(mmmPerformanceDaily.date, cutoff))
+      .groupBy(mmmPerformanceDaily.date);
+
+    const spendRows = await db
+      .select()
+      .from(mmmDailySpend)
+      .where(gte(mmmDailySpend.date, cutoff));
+
+    const sourceByDay = await db
+      .select({
+        date: mmmSourceDaily.date,
+        revenue: sql<number>`coalesce(sum(${mmmSourceDaily.revenue}), 0)`,
+      })
+      .from(mmmSourceDaily)
+      .where(gte(mmmSourceDaily.date, cutoff))
+      .groupBy(mmmSourceDaily.date);
+
+    const adSpendMap = new Map(adSpendByDay.map((r) => [r.date, Number(r.adSpend) || 0]));
+    const spendMap = new Map(spendRows.map((r) => [r.date, r]));
+    const sourceMap = new Map(sourceByDay.map((r) => [r.date, Number(r.revenue) || 0]));
+
+    const dates = new Set<string>([
+      ...adSpendByDay.map((r) => r.date),
+      ...perfByDay.map((r) => r.date),
+      ...spendRows.map((r) => r.date),
+      ...sourceByDay.map((r) => r.date),
+    ]);
+
+    const perfMap = new Map(perfByDay.map((r) => [r.date, r]));
+
+    return Array.from(dates)
+      .sort()
+      .map((date) => {
+        const p = perfMap.get(date);
+        const s = spendMap.get(date);
+        const creativeSpend = adSpendMap.get(date) || 0;
+        const creativeRevenue = Number(p?.creativeRevenue) || 0;
+        const googleSpend = Number(s?.googleSpend) || 0;
+        const taboolaSpend = Number(s?.taboolaSpend) || 0;
+        const sourceRevenue = sourceMap.get(date) || 0;
+        const totalSpend = creativeSpend + googleSpend + taboolaSpend;
+        const combinedRevenue = creativeRevenue + sourceRevenue;
+        // adjusted == combined at the day level (attributed + gross once).
+        const adjustedRevenue = combinedRevenue;
+        return {
+          date,
+          creativeSpend,
+          googleSpend,
+          taboolaSpend,
+          totalSpend,
+          creativeRevenue,
+          sourceRevenue,
+          combinedRevenue,
+          adjustedRevenue,
+          roas: totalSpend > 0 ? combinedRevenue / totalSpend : null,
+          adjustedRoas: totalSpend > 0 ? adjustedRevenue / totalSpend : null,
+        };
+      });
+  }
+
+  async getMmmRuns(limit: number): Promise<MmmRunLog[]> {
+    return db
+      .select()
+      .from(mmmRunLog)
+      .orderBy(desc(mmmRunLog.startedAt))
+      .limit(limit);
+  }
+
+  async getMmmLatestRun(): Promise<MmmRunLog | undefined> {
+    const [run] = await db
+      .select()
+      .from(mmmRunLog)
+      .orderBy(desc(mmmRunLog.startedAt))
+      .limit(1);
+    return run;
   }
 }
 

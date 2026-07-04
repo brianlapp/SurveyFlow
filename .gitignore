@@ -4,3 +4,14 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# MMM pipeline runtime artifacts
+mmm-pipeline-package/data/
+mmm-pipeline-package/config/credentials.json
+.cache/ms-playwright/
