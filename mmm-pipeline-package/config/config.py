@@ -59,6 +59,9 @@ def load_credentials():
         "anthropic": {
             "api_key": _env("ANTHROPIC_API_KEY"),
         },
+        "openai": {
+            "api_key": _env("OPENAI_API_KEY"),
+        },
         "google_ads": {
             "developer_token": _env("GOOGLE_ADS_DEVELOPER_TOKEN"),
             "client_id": _env("GOOGLE_ADS_CLIENT_ID"),

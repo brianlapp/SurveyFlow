@@ -176,10 +176,14 @@ def run(target_date=None):
     joined_rows = len(data["performance"])
     log(f"  Joined: {joined_rows} creative rows")
 
-    # --- AI Daily Summary (optional; skipped without ANTHROPIC_API_KEY) ---
+    # --- AI Daily Summary (optional; skipped without OPENAI_API_KEY) ---
+    # Uses OpenAI (gpt-4o-mini) instead of Anthropic: this project already has
+    # OPENAI_API_KEY configured for the survey question generator, so the daily
+    # summary reuses that key rather than requiring a separate paid Anthropic
+    # key just for a once-a-day few-hundred-token summary.
     ai_summary = ""
-    anthropic_key = creds.get("anthropic", {}).get("api_key", "")
-    if anthropic_key:
+    openai_key = creds.get("openai", {}).get("api_key", "")
+    if openai_key:
         log("Generating AI summary...")
         try:
             import requests as req2
@@ -226,27 +230,26 @@ Lowest creatives by Adjusted ROAS: {bottom_str if bottom_str else 'N/A'}
 Write the summary now:"""
 
             ai_resp = req2.post(
-                "https://api.anthropic.com/v1/messages",
+                "https://api.openai.com/v1/chat/completions",
                 headers={
                     "Content-Type": "application/json",
-                    "x-api-key": anthropic_key,
-                    "anthropic-version": "2023-06-01",
+                    "Authorization": f"Bearer {openai_key}",
                 },
                 json={
-                    "model": "claude-sonnet-4-5-20250929",
+                    "model": "gpt-4o-mini",
                     "max_tokens": 400,
                     "messages": [{"role": "user", "content": prompt}],
                 },
                 timeout=30,
             )
             ai_resp.raise_for_status()
-            ai_summary = ai_resp.json()["content"][0]["text"].strip()
+            ai_summary = ai_resp.json()["choices"][0]["message"]["content"].strip()
             log(f"  AI Summary: generated ({len(ai_summary)} chars)")
         except Exception as e:
             log(f"  AI Summary FAILED (non-fatal): {e}")
             ai_summary = ""
     else:
-        log("  AI Summary: skipped (no ANTHROPIC_API_KEY)")
+        log("  AI Summary: skipped (no OPENAI_API_KEY)")
 
     # --- Finalize run log ---
     sources_status = [
