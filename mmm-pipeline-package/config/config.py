@@ -8,6 +8,32 @@ each scraper can skip gracefully (empty data is acceptable until creds exist).
 """
 
 import os
+import subprocess
+import sys
+
+
+def ensure_playwright():
+    """
+    Install the Playwright Chromium browser if the executable is missing.
+    Runs silently in dev (browser already present via Nix playwright-driver).
+    In production (Autoscale Docker), the browser cache is empty after deploy,
+    so this installs it on the first pipeline run (~30s one-time cost).
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            browser.close()
+    except Exception:
+        print("[config] Playwright browser not found — installing chromium...", flush=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            capture_output=False,
+        )
+        if result.returncode != 0:
+            print("[config] WARNING: playwright install returned non-zero exit code", flush=True)
+        else:
+            print("[config] Playwright chromium installed successfully.", flush=True)
 
 
 # Public Google Sheet used for Google/Taboola spend + backfill revenue.

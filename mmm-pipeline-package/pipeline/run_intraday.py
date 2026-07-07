@@ -13,6 +13,9 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
+from config.config import ensure_playwright
+ensure_playwright()
+
 from pipeline.database import (
     init_db, clear_date,
     insert_meta_rows, insert_google_rows, insert_ims_rows, insert_ao_rows,

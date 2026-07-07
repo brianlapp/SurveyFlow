@@ -14,6 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from config.config import ensure_playwright
+ensure_playwright()
+
 from scrapers.meta_puller import pull_meta_spend
 from scrapers.google_ads_puller import pull_google_ads_spend
 from scrapers.ims_scraper import pull_ims_revenue
