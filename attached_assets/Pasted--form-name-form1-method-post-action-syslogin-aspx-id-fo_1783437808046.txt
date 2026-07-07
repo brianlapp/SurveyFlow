@@ -1,0 +1,143 @@
+<form name="form1" method="post" action="./syslogin.aspx" id="form1">
+<div>
+<input type="hidden" name="__LASTFOCUS" id="__LASTFOCUS" value="">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="MijLUNfnWyg2g6S1aTRIwP3+dKLxWUIvPNz3yZFsDOINYh0KK+wMSYayMrvyMMF6aPFluu4nUCSrsQGSLsEBXRXX6nu7Ht7tKYfbfRTDtsGMg+OPkmNOmlRz1n2+/qa75oE3cO1inhspgsezRiGqkdv0g6WUFLfxd7VuWxcKtqLiI6wSJ2JwN4iPcibSS7nE">
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['form1'];
+if (!theForm) {
+    theForm = document.form1;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=pynGkmcFUV13He1Qd6_TZCzICk76WNT1ZGCpoLu7RGGVxdyAeQQTyRvtIXuv8WcDHAOgqymLcr37eZa1X3Oj-Q2&amp;t=638901274200000000" type="text/javascript"></script>
+
+
+<script src="/WebResource.axd?d=JoBkLzP19aTuxbWOhHobYvYaz9IeXHyRkihUg2M4KbioRs79bxhv5hc_eKQrxbefxcku_gFIg28tFQfJoH4Ejg2&amp;t=638901274200000000" type="text/javascript"></script>
+<div>
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="26F1996A">
+	<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="">
+	<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="">
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="qAjcDqfnpafYRiyDDyLexU+ktVQ0dMg95YSPLra0xcJuHPb93rAT/z4Dwv9SX3QJIhQsHpIc6+8ByGwgPZjL1QDGI2Q8CBmWUEPLkq82vVtXo0buZEJ/TACWu/IceKZtk04S+GCkipz/2hBVlrUFM8aLwFx6hyv281Eg9g88k0e5VsroGVqzLV/2u5w0V/qp">
+</div>
+        <div>
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tbody><tr>
+                    <td align="center" valign="middle">
+                        <table width="500" border="0" cellpadding="0" cellspacing="0">
+                            <tbody><tr>
+                                <td align="center" valign="middle">&nbsp;
+                                </td>
+                                <td align="right" valign="top">&nbsp;
+                                </td>
+                                <td align="left" valign="bottom">&nbsp;
+                                </td>
+                                <td align="left" valign="bottom">&nbsp;
+                                </td>
+                            </tr>
+                            <tr>
+                                <td width="1" align="center" valign="middle">
+                                    <img src="assets/images/spc.gif" width="1" height="250" alt="">
+                                </td>
+                                <td width="137" align="right" valign="top">
+                                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                        <tbody><tr>
+                                            <td align="right" valign="top" class="mediumRedPlain">
+                                                <img src="assets/images/logo.gif" border="0" alt=""><br>
+                                            </td>
+                                            <td align="right" valign="top">&nbsp;
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="right" valign="top" class="VersionText" style="padding-right: 10px;">
+                                                ver 01.01
+                                            </td>
+                                            <td align="right" valign="top">&nbsp;
+                                            </td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                                <td width="10" align="left" valign="bottom" class="LEFTLINE">&nbsp;
+                                </td>
+                                <td width="502" align="left" valign="bottom">
+                                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                        <tbody><tr class="NormalText">
+                                            <td align="center" valign="top" class="smallText"></td>
+                                        </tr>
+                                        <tr class="NormalText">
+                                            <td align="left" valign="top" class="smallText">&nbsp;
+                                            </td>
+                                        </tr>
+                                        <tr class="NormalText">
+                                            <td align="left" valign="top" class="smallText" style="padding: 5px;">
+                                                
+                                            </td>
+                                        </tr>
+                                        <tr class="NormalText">
+                                            <td align="left" valign="top" class="smallText">&nbsp;
+                                            </td>
+                                        </tr>
+                                        <tr class="NormalText">
+                                            <td align="left" valign="top" class="smallText" style="padding-left: 5px;">User Name
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="left" valign="top" class="smallText" style="height: 22px; padding-left: 5px; padding-top: 5px;">
+                                                <input name="txtUserName" type="text" id="txtUserName" class="FlatBox" autocomplete="on">
+                                            </td>
+                                        </tr>
+                                        <tr class="NormalText">
+                                            <td align="left" valign="top" class="smallText">&nbsp;
+                                            </td>
+                                        </tr>
+                                        <tr class="NormalText">
+                                            <td align="left" valign="top" class="smallText" style="padding-left: 5px;">Password
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="left" valign="top" class="smallText" style="padding-left: 5px; padding-top: 5px;">
+                                                <input name="txtPassword" type="password" id="txtPassword" class="FlatBox" autocomplete="on">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="left" valign="top" class="smallText">&nbsp;
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="left" valign="top" class="smallText" style="height: 24px">&nbsp; &nbsp;
+                                            <input type="submit" name="btnSignIn" value="Sign in" onclick="return isValidEntry();" id="btnSignIn" style="background-color:Gold;border-color:#FF8000;border-style:Solid;">
+                                                <input type="hidden" name="hdnClientScreenResolution" id="hdnClientScreenResolution" value="1920x1080">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="left" valign="baseline" class="mediumRedPlain" style="height: 24px">
+                                                
+                                            </td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    
+
+<script type="text/javascript">
+//<![CDATA[
+WebForm_AutoFocus('txtUserName');//]]>
+</script>
+</form>
