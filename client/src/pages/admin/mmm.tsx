@@ -461,7 +461,8 @@ export default function Mmm() {
             <CardHeader>
               <CardTitle className="text-base">Creative Performance</CardTitle>
               <CardDescription>
-                Aggregated over the last {days} days. Click a row for its daily trend.
+                {dataRange ? `${dataRange} · ` : ""}
+                {`Aggregated over the last ${days} days. Click a row for its daily trend.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
