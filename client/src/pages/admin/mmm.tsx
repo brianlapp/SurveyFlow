@@ -42,8 +42,21 @@ import {
   XCircle,
   Loader2,
   AlertTriangle,
+  Info,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   ResponsiveContainer,
   LineChart,
@@ -51,7 +64,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
 
@@ -188,6 +201,80 @@ const shortDate = (d: string) => {
   }
 };
 
+// ---- Creative table config ----
+type MmmSortKey =
+  | "spend"
+  | "totalRevenue"
+  | "adjustedRevenue"
+  | "day0Roas"
+  | "adjustedRoas";
+
+const COL_TOOLTIPS = {
+  revenue:
+    "Directly attributed revenue from IMS/TMG and AfterOffers, which report earnings tagged to each ad name. Measured, not estimated.",
+  adjRevenue:
+    "Attributed revenue plus this creative's estimated share of Zenect + Interactive Offers, which report only a daily total with no ad-name breakdown. That pool is split across creatives by IMS impressions. This figure is an estimate.",
+  roas: "Return on ad spend using measured (attributed) revenue only: Revenue ÷ Spend.",
+  adjRoas:
+    "Return on ad spend including the estimated blended revenue: Adj. Revenue ÷ Spend.",
+} as const;
+
+const PLATFORM_KNOWN = ["Meta", "Google", "Taboola"];
+
+// Minimal shape shared by CreativeRow (rolled up) and PerformanceRow (per day)
+// that filtering + sorting operate on.
+interface SortableRow {
+  compoundKey: string;
+  adName: string | null;
+  platform: string;
+  spend: number;
+  totalRevenue: number;
+  adjustedRevenue: number;
+  day0Roas: number | null;
+  adjustedRoas: number | null;
+}
+
+// Rendering superset — `date` present in "By day" rows, `activeDays` in
+// "By creative" rows. Both CreativeRow and PerformanceRow satisfy this.
+type TableRowData = SortableRow & { date?: string; activeDays?: number };
+
+function filterSortRows<T extends SortableRow>(
+  rows: T[],
+  search: string,
+  platform: string,
+  sortKey: MmmSortKey,
+  sortDir: "asc" | "desc",
+): T[] {
+  const q = search.trim().toLowerCase();
+  const filtered = rows.filter((r) => {
+    const platformOk =
+      platform === "all"
+        ? true
+        : platform === "Other"
+        ? !PLATFORM_KNOWN.includes(r.platform)
+        : r.platform === platform;
+    if (!platformOk) return false;
+    if (!q) return true;
+    return (
+      r.compoundKey.toLowerCase().includes(q) ||
+      (r.adName ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  return filtered.slice().sort((a, b) => {
+    const av = a[sortKey];
+    const bv = b[sortKey];
+    const aNull = av == null;
+    const bNull = bv == null;
+    // Nulls (ROAS "—") always sort to the bottom regardless of direction.
+    if (aNull && bNull) return 0;
+    if (aNull) return 1;
+    if (bNull) return -1;
+    const diff = (av as number) - (bv as number);
+    return sortDir === "asc" ? diff : -diff;
+  });
+}
+
 // A run stuck in "running" (e.g. the detached job was killed before it could
 // write its finish state) should not disable Run Now or poll forever.
 const RUN_STALE_MS = 30 * 60 * 1000;
@@ -201,6 +288,22 @@ export default function Mmm() {
   const [days, setDays] = useState("30");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [countdown, setCountdown] = useState("");
+
+  // Creative Performance table controls
+  const [tableView, setTableView] = useState<"creative" | "day">("creative");
+  const [search, setSearch] = useState("");
+  const [platformFilter, setPlatformFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<MmmSortKey>("spend");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const toggleSort = (col: MmmSortKey) => {
+    if (sortKey === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(col);
+      setSortDir("desc");
+    }
+  };
 
   const { data: perf, isLoading: perfLoading } = useQuery<PerformanceResponse>({
     queryKey: [`/api/mmm/performance?days=${days}`],
@@ -271,7 +374,21 @@ export default function Mmm() {
   const googleApiMissing = googleRows.length > 0 && googleRows.every((c) => c.impressions === 0);
   const showDataWarning = metaSpendMissing || googleApiMissing;
 
+  // Base dataset for the Creative Performance table depends on the view.
+  const tableSource: TableRowData[] =
+    tableView === "creative" ? creatives : perfRows;
+  const filteredRows = filterSortRows(
+    tableSource,
+    search,
+    platformFilter,
+    sortKey,
+    sortDir,
+  );
+  const ROW_CAP = 50;
+  const visibleRows: TableRowData[] = filteredRows.slice(0, ROW_CAP);
+
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="p-6 space-y-6" data-testid="page-mmm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -355,7 +472,9 @@ export default function Mmm() {
               <CardContent>
                 <div
                   className={`text-2xl font-bold ${
-                    overallRoas == null
+                    showDataWarning
+                      ? "text-muted-foreground"
+                      : overallRoas == null
                       ? ""
                       : overallRoas >= 1
                       ? "text-green-600 dark:text-green-400"
@@ -364,6 +483,11 @@ export default function Mmm() {
                 >
                   {roasLabel(overallRoas)}
                 </div>
+                {showDataWarning && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Estimate — spend incomplete
+                  </div>
+                )}
               </CardContent>
             </Card>
             <Card data-testid="card-net-profit">
@@ -375,13 +499,20 @@ export default function Mmm() {
               <CardContent>
                 <div
                   className={`text-2xl font-bold ${
-                    netProfit >= 0
+                    showDataWarning
+                      ? "text-muted-foreground"
+                      : netProfit >= 0
                       ? "text-green-600 dark:text-green-400"
                       : "text-red-600 dark:text-red-400"
                   }`}
                 >
                   {money(netProfit)}
                 </div>
+                {showDataWarning && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Estimate — spend incomplete
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -432,7 +563,7 @@ export default function Mmm() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="date" fontSize={12} />
                     <YAxis fontSize={12} tickFormatter={(v) => `$${v}`} />
-                    <Tooltip
+                    <RechartsTooltip
                       formatter={(v: number) => money(v)}
                       contentStyle={{
                         background: "hsl(var(--card))",
@@ -466,7 +597,9 @@ export default function Mmm() {
             <CardHeader>
               <CardTitle className="text-base">Creative Performance</CardTitle>
               <CardDescription>
-                {`One row per creative per day. Click a row to see its full trend.`}
+                {tableView === "creative"
+                  ? "One rolled-up row per creative over the window. Click a row to see its full trend."
+                  : "One row per creative per day. Click a row to see its full trend."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -476,65 +609,181 @@ export default function Mmm() {
                     <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
-              ) : perfRows.length === 0 ? (
+              ) : tableSource.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground text-sm">
                   No creative data yet. Connect ad accounts and run the pipeline to
                   populate this table.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Creative</TableHead>
-                        <TableHead>Platform</TableHead>
-                        <TableHead className="text-right">Spend</TableHead>
-                        <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">Adj. Revenue</TableHead>
-                        <TableHead className="text-right">ROAS</TableHead>
-                        <TableHead className="text-right">Adj. ROAS</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {perfRows.map((r, i) => (
-                        <TableRow
-                          key={`${r.date}-${r.compoundKey}-${i}`}
-                          className="cursor-pointer"
-                          onClick={() => setSelectedKey(r.compoundKey)}
-                          data-testid={`row-creative-${r.compoundKey}`}
-                        >
-                          <TableCell className="text-muted-foreground whitespace-nowrap">
-                            {shortDate(r.date)}
-                          </TableCell>
-                          <TableCell className="max-w-[220px]">
-                            <div className="font-medium truncate">{r.compoundKey}</div>
-                            {r.adName && (
-                              <div className="text-xs text-muted-foreground truncate">{r.adName}</div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={platformClass(r.platform)}>
-                              {r.platform}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">{money(r.spend)}</TableCell>
-                          <TableCell className="text-right tabular-nums">{money(r.totalRevenue)}</TableCell>
-                          <TableCell className="text-right tabular-nums">{money(r.adjustedRevenue)}</TableCell>
-                          <TableCell className="text-right">
-                            <span className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(r.day0Roas)}`}>
-                              {roasLabel(r.day0Roas)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(r.adjustedRoas)}`}>
-                              {roasLabel(r.adjustedRoas)}
-                            </span>
-                          </TableCell>
+                <div className="space-y-4">
+                  {/* Toolbar: view toggle, search, platform filter */}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="inline-flex rounded-md border p-0.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={tableView === "creative" ? "secondary" : "ghost"}
+                        className="h-8"
+                        onClick={() => setTableView("creative")}
+                        data-testid="toggle-by-creative"
+                      >
+                        By creative
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={tableView === "day" ? "secondary" : "ghost"}
+                        className="h-8"
+                        onClick={() => setTableView("day")}
+                        data-testid="toggle-by-day"
+                      >
+                        By day
+                      </Button>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:justify-end">
+                      <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Search ad name or key…"
+                          className="pl-8"
+                          data-testid="input-creative-search"
+                        />
+                      </div>
+                      <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                        <SelectTrigger className="w-full sm:w-40" data-testid="select-platform">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All platforms</SelectItem>
+                          <SelectItem value="Meta">Meta</SelectItem>
+                          <SelectItem value="Google">Google</SelectItem>
+                          <SelectItem value="Taboola">Taboola</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {tableView === "day" && <TableHead>Date</TableHead>}
+                          <TableHead>Creative</TableHead>
+                          <TableHead>Platform</TableHead>
+                          <SortHead
+                            label="Spend"
+                            col="spend"
+                            sortKey={sortKey}
+                            sortDir={sortDir}
+                            onSort={toggleSort}
+                          />
+                          <SortHead
+                            label="Revenue"
+                            col="totalRevenue"
+                            sortKey={sortKey}
+                            sortDir={sortDir}
+                            onSort={toggleSort}
+                            info={COL_TOOLTIPS.revenue}
+                          />
+                          <SortHead
+                            label="Adj. Revenue"
+                            col="adjustedRevenue"
+                            sortKey={sortKey}
+                            sortDir={sortDir}
+                            onSort={toggleSort}
+                            info={COL_TOOLTIPS.adjRevenue}
+                          />
+                          <SortHead
+                            label="ROAS"
+                            col="day0Roas"
+                            sortKey={sortKey}
+                            sortDir={sortDir}
+                            onSort={toggleSort}
+                            info={COL_TOOLTIPS.roas}
+                          />
+                          <SortHead
+                            label="Adj. ROAS"
+                            col="adjustedRoas"
+                            sortKey={sortKey}
+                            sortDir={sortDir}
+                            onSort={toggleSort}
+                            info={COL_TOOLTIPS.adjRoas}
+                          />
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {visibleRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={tableView === "day" ? 8 : 7}
+                              className="py-8 text-center text-muted-foreground text-sm"
+                            >
+                              No creatives match your search or filter.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          visibleRows.map((r, i) => {
+                            const primary = r.adName ?? r.compoundKey;
+                            const sub = r.adName ? r.compoundKey : null;
+                            return (
+                              <TableRow
+                                key={`${r.date ?? ""}-${r.compoundKey}-${i}`}
+                                className="cursor-pointer"
+                                onClick={() => setSelectedKey(r.compoundKey)}
+                                data-testid={`row-creative-${r.compoundKey}`}
+                              >
+                                {tableView === "day" && (
+                                  <TableCell className="text-muted-foreground whitespace-nowrap">
+                                    {r.date ? shortDate(r.date) : "—"}
+                                  </TableCell>
+                                )}
+                                <TableCell className="max-w-[260px]">
+                                  <div className="font-medium truncate">{primary}</div>
+                                  {sub && (
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      {sub}
+                                    </div>
+                                  )}
+                                  {tableView === "creative" && r.activeDays != null && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {r.activeDays} {r.activeDays === 1 ? "day" : "days"}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={platformClass(r.platform)}>
+                                    {r.platform}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">{money(r.spend)}</TableCell>
+                                <TableCell className="text-right tabular-nums">{money(r.totalRevenue)}</TableCell>
+                                <TableCell className="text-right tabular-nums">{money(r.adjustedRevenue)}</TableCell>
+                                <TableCell className="text-right">
+                                  <span className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(r.day0Roas)}`}>
+                                    {roasLabel(r.day0Roas)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(r.adjustedRoas)}`}>
+                                    {roasLabel(r.adjustedRoas)}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {filteredRows.length > ROW_CAP && (
+                    <div className="text-xs text-muted-foreground">
+                      Showing {ROW_CAP} of {filteredRows.length} — refine with search/filter
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -695,7 +944,7 @@ export default function Mmm() {
                     fontSize={12}
                     tickFormatter={(v) => `${v}x`}
                   />
-                  <Tooltip
+                  <RechartsTooltip
                     contentStyle={{
                       background: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
@@ -772,6 +1021,64 @@ export default function Mmm() {
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
+  );
+}
+
+function HeaderInfo({ text }: { text: string }) {
+  return (
+    <UITooltip>
+      <TooltipTrigger asChild>
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={text}
+          className="inline-flex cursor-help text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+          onClick={(e) => e.stopPropagation()}
+          data-testid="header-info"
+        >
+          <Info className="h-3.5 w-3.5" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-xs leading-relaxed">
+        {text}
+      </TooltipContent>
+    </UITooltip>
+  );
+}
+
+function SortHead({
+  label,
+  col,
+  sortKey,
+  sortDir,
+  onSort,
+  info,
+}: {
+  label: string;
+  col: MmmSortKey;
+  sortKey: MmmSortKey;
+  sortDir: "asc" | "desc";
+  onSort: (col: MmmSortKey) => void;
+  info?: string;
+}) {
+  const active = sortKey === col;
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <TableHead className="text-right">
+      <div className="flex items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={() => onSort(col)}
+          className="inline-flex items-center gap-1 hover:text-foreground"
+          data-testid={`sort-${col}`}
+        >
+          <span>{label}</span>
+          <Icon className={`h-3.5 w-3.5 ${active ? "" : "text-muted-foreground"}`} />
+        </button>
+        {info && <HeaderInfo text={info} />}
+      </div>
+    </TableHead>
   );
 }
 
