@@ -248,6 +248,7 @@ export interface IStorage {
   getMmmDailyTotals(days: number): Promise<MmmDailyTotal[]>;
   getMmmRuns(limit: number): Promise<MmmRunLog[]>;
   getMmmLatestRun(): Promise<MmmRunLog | undefined>;
+  markMmmRunFailed(id: number, error: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1378,6 +1379,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(mmmRunLog.startedAt))
       .limit(1);
     return run;
+  }
+
+  async markMmmRunFailed(id: number, error: string): Promise<void> {
+    await db
+      .update(mmmRunLog)
+      .set({ status: "failed", finishedAt: new Date(), errors: [error] })
+      .where(eq(mmmRunLog.id, id));
   }
 }
 

@@ -761,16 +761,23 @@ function RunStatusBadge({ status }: { status: string }) {
       </Badge>
     );
   }
-  if (status === "error") {
+  if (status === "error" || status === "failed") {
     return (
       <Badge variant="outline" className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20">
-        <XCircle className="h-3 w-3 mr-1" /> Error
+        <XCircle className="h-3 w-3 mr-1" /> Failed
+      </Badge>
+    );
+  }
+  if (status === "running") {
+    return (
+      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Running
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
-      <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Running
+    <Badge variant="outline" className="bg-muted text-muted-foreground">
+      {status}
     </Badge>
   );
 }

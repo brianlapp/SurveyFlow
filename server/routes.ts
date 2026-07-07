@@ -2410,17 +2410,29 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
         if (isFresh) {
           return res.status(409).json({ message: "A pipeline run is already in progress" });
         }
+        // Relabel the zombie row so the history table doesn't show a
+        // perpetually spinning "Running" badge for a dead run.
+        await storage.markMmmRunFailed(
+          latest.id,
+          "Marked stale: run process died before completing",
+        );
       }
 
+      // NOTE: do NOT use detached:true here — Replit reaps orphaned process
+      // groups, which silently kills the run. Keeping the child attached to
+      // the server process lets it finish; if the server restarts mid-run,
+      // the stale-run guard above unbricks Run Now.
       const pkgDir = path.join(process.cwd(), "mmm-pipeline-package");
       const child = spawn("python3", ["pipeline/run_intraday.py"], {
         cwd: pkgDir,
-        detached: true,
-        stdio: "ignore",
+        stdio: ["ignore", "inherit", "inherit"],
         env: process.env,
       });
       child.on("error", (err) => {
         console.error("Failed to spawn MMM intraday run:", err);
+      });
+      child.on("exit", (code) => {
+        if (code !== 0) console.error(`MMM intraday run exited with code ${code}`);
       });
       child.unref();
 
