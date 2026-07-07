@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Card,
   CardContent,
@@ -367,6 +368,16 @@ export default function Mmm() {
   const latest = runsData?.latest;
   const runActive = isRunActive(latest);
 
+  const runMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/mmm/run"),
+    onSuccess: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/mmm/runs"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/mmm/performance"] });
+      }, 3000);
+    },
+  });
+
 
   const metaRows = creatives.filter((c) => c.platform === "Meta");
   const googleRows = creatives.filter((c) => c.platform === "Google");
@@ -413,7 +424,7 @@ export default function Mmm() {
             className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
             data-testid="next-run-countdown"
           >
-            {runActive ? (
+            {runActive || runMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                 <span className="text-blue-600 dark:text-blue-400 font-medium">Running now…</span>
@@ -426,6 +437,20 @@ export default function Mmm() {
               </>
             )}
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => runMutation.mutate()}
+            disabled={runActive || runMutation.isPending}
+            data-testid="btn-run-now"
+          >
+            {runMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-1" />
+            )}
+            Run Now
+          </Button>
         </div>
       </div>
 
