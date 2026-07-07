@@ -50,6 +50,17 @@ def pull_ims_revenue(credentials, target_date=None):
             page.fill("input[name='txtPassword']", creds["password"])
             page.click("input[name='btnSignIn']")
             page.wait_for_load_state("networkidle")
+
+            # Verify login actually succeeded — the portal enforces one active
+            # session per account and bounces extra logins back to syslogin.aspx
+            # with ex=Y and a "Login Failed" message. Without this check the run
+            # would silently continue and report "no data" instead of the truth.
+            body_text = page.evaluate("() => document.body.innerText || ''")
+            if "ex=Y" in page.url or "Login Failed" in body_text:
+                raise RuntimeError(
+                    "IMS login blocked (ex=Y) — another session is active for this "
+                    "account or it is temporarily throttled. Will retry next run."
+                )
             print(f"  IMS: Logged in")
 
             # Navigate to Revenue Report
@@ -151,6 +162,30 @@ def pull_ims_revenue(credentials, target_date=None):
             except Exception:
                 pass
         finally:
+            # Explicitly log out so we don't leave a server-side session open —
+            # the portal enforces one active session per account, and a dangling
+            # session blocks the next login (ours or a human's) with "ex=Y".
+            try:
+                logged_out = page.evaluate("""() => {
+                    var all = Array.from(document.querySelectorAll('a, input, button'));
+                    for (var el of all) {
+                        var txt = ((el.value || el.innerText || '') + '').trim().toLowerCase();
+                        var href = (el.href || '') + '';
+                        if (txt.includes('logout') || txt.includes('log out') ||
+                            txt.includes('sign out') || href.toLowerCase().includes('logout')) {
+                            el.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }""")
+                if logged_out:
+                    page.wait_for_load_state("networkidle", timeout=10000)
+                    print("  IMS: Logged out cleanly")
+                else:
+                    print("  IMS: No logout link found on final page")
+            except Exception:
+                pass
             browser.close()
 
     print(f"  IMS: Pulled {len(rows)} revenue rows")

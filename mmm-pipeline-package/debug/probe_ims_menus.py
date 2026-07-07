@@ -34,23 +34,11 @@ with sync_playwright() as p:
         print(" ", i)
     page.screenshot(path="../data/ims_probe1.png")
 
-    # If there's a continue/yes button for existing session, click it
-    clicked = page.evaluate("""() => {
-        var all = Array.from(document.querySelectorAll('input, button, a'));
-        for (var el of all) {
-            var txt = ((el.value || el.innerText || '') + '').trim().toLowerCase();
-            if (txt.includes('continue') || txt === 'yes' || txt.includes('proceed') || txt.includes('sign in')) {
-                el.click();
-                return txt;
-            }
-        }
-        return '';
-    }""")
-    if clicked:
-        print("Clicked:", clicked)
-        page.wait_for_load_state("networkidle")
-        time.sleep(2)
-        print("Now at:", page.url)
+    # If login failed, stop here — do NOT resubmit and rack up failed attempts
+    if "Login Failed" in body_text or "ex=Y" in page.url:
+        print("LOGIN BLOCKED — stopping without retry to avoid lockout")
+        browser.close()
+        sys.exit(1)
 
     # Try going to the placement page regardless
     page.goto("https://admin.tmginteractive.com/MISReports/apiPlacementMIS.aspx", timeout=30000)
