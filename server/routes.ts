@@ -2453,25 +2453,27 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
         );
       }
 
-      // NOTE: do NOT use detached:true here — Replit reaps orphaned process
-      // groups, which silently kills the run. Keeping the child attached to
-      // the server process lets it finish; if the server restarts mid-run,
-      // the stale-run guard above unbricks Run Now.
+      // Run the pipeline synchronously — wait for it to finish before
+      // returning. On Autoscale, background work after a 202 is killed when
+      // the instance is recycled; keeping the connection open for the full
+      // run (~60-90s) prevents that. The client shows a spinner until 200.
       const pkgDir = path.join(process.cwd(), "mmm-pipeline-package");
-      const child = spawn("python3", ["pipeline/run_intraday.py"], {
-        cwd: pkgDir,
-        stdio: ["ignore", "inherit", "inherit"],
-        env: process.env,
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn("python3", ["pipeline/run_intraday.py"], {
+          cwd: pkgDir,
+          stdio: ["ignore", "inherit", "inherit"],
+          env: process.env,
+        });
+        child.on("error", reject);
+        child.on("exit", (code) => {
+          if (code !== 0) {
+            console.error(`MMM intraday run exited with code ${code}`);
+          }
+          resolve();
+        });
       });
-      child.on("error", (err) => {
-        console.error("Failed to spawn MMM intraday run:", err);
-      });
-      child.on("exit", (code) => {
-        if (code !== 0) console.error(`MMM intraday run exited with code ${code}`);
-      });
-      child.unref();
 
-      res.status(202).json({ message: "Intraday pipeline run started" });
+      res.status(200).json({ message: "Intraday pipeline run complete" });
     } catch (error) {
       console.error("Error triggering MMM run:", error);
       res.status(500).json({ message: "Failed to trigger MMM run" });
