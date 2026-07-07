@@ -15,3 +15,4 @@ __pycache__/
 mmm-pipeline-package/data/
 mmm-pipeline-package/config/credentials.json
 .cache/ms-playwright/
+credentials_*.json
