@@ -2359,11 +2359,12 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
   app.get('/api/mmm/performance', isAuthenticated, async (req, res) => {
     try {
       const days = parseDays(req.query.days, 30);
-      const [creatives, dailyTotals] = await Promise.all([
+      const [creatives, dailyTotals, rows] = await Promise.all([
         storage.getMmmCreativePerformance(days),
         storage.getMmmDailyTotals(days),
+        storage.getMmmPerformanceRows(days),
       ]);
-      res.json({ days, creatives, dailyTotals });
+      res.json({ days, creatives, dailyTotals, rows });
     } catch (error) {
       console.error("Error fetching MMM performance:", error);
       res.status(500).json({ message: "Failed to fetch MMM performance" });

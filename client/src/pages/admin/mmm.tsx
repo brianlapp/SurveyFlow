@@ -87,10 +87,24 @@ interface DailyTotal {
   adjustedRoas: number | null;
 }
 
+interface PerformanceRow {
+  date: string;
+  compoundKey: string;
+  platform: string;
+  adName: string | null;
+  spend: number;
+  impressions: number;
+  totalRevenue: number;
+  adjustedRevenue: number;
+  day0Roas: number | null;
+  adjustedRoas: number | null;
+}
+
 interface PerformanceResponse {
   days: number;
   creatives: CreativeRow[];
   dailyTotals: DailyTotal[];
+  rows: PerformanceRow[];
 }
 
 interface DetailRow {
@@ -226,6 +240,7 @@ export default function Mmm() {
 
   const creatives = perf?.creatives ?? [];
   const dailyTotals = perf?.dailyTotals ?? [];
+  const perfRows = perf?.rows ?? [];
 
   // Topline aggregates over the selected window.
   const totalSpend = dailyTotals.reduce((s, d) => s + d.totalSpend, 0);
@@ -461,8 +476,7 @@ export default function Mmm() {
             <CardHeader>
               <CardTitle className="text-base">Creative Performance</CardTitle>
               <CardDescription>
-                {dataRange ? `${dataRange} · ` : ""}
-                {`Aggregated over the last ${days} days. Click a row for its daily trend.`}
+                {`One row per creative per day. Click a row to see its full trend.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -472,7 +486,7 @@ export default function Mmm() {
                     <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
-              ) : creatives.length === 0 ? (
+              ) : perfRows.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground text-sm">
                   No creative data yet. Connect ad accounts and run the pipeline to
                   populate this table.
@@ -482,6 +496,7 @@ export default function Mmm() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Date</TableHead>
                         <TableHead>Creative</TableHead>
                         <TableHead>Platform</TableHead>
                         <TableHead className="text-right">Spend</TableHead>
@@ -489,61 +504,42 @@ export default function Mmm() {
                         <TableHead className="text-right">Adj. Revenue</TableHead>
                         <TableHead className="text-right">ROAS</TableHead>
                         <TableHead className="text-right">Adj. ROAS</TableHead>
-                        <TableHead className="text-right">Impr.</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {creatives.map((c) => (
+                      {perfRows.map((r, i) => (
                         <TableRow
-                          key={c.compoundKey}
+                          key={`${r.date}-${r.compoundKey}-${i}`}
                           className="cursor-pointer"
-                          onClick={() => setSelectedKey(c.compoundKey)}
-                          data-testid={`row-creative-${c.compoundKey}`}
+                          onClick={() => setSelectedKey(r.compoundKey)}
+                          data-testid={`row-creative-${r.compoundKey}`}
                         >
-                          <TableCell className="max-w-[240px]">
-                            <div className="font-medium truncate">
-                              {c.compoundKey}
-                            </div>
-                            {c.adName && (
-                              <div className="text-xs text-muted-foreground truncate">
-                                {c.adName}
-                              </div>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">
+                            {shortDate(r.date)}
+                          </TableCell>
+                          <TableCell className="max-w-[220px]">
+                            <div className="font-medium truncate">{r.compoundKey}</div>
+                            {r.adName && (
+                              <div className="text-xs text-muted-foreground truncate">{r.adName}</div>
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={platformClass(c.platform)}>
-                              {c.platform}
+                            <Badge variant="outline" className={platformClass(r.platform)}>
+                              {r.platform}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {money(c.spend)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {money(c.totalRevenue)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {money(c.adjustedRevenue)}
-                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{money(r.spend)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{money(r.totalRevenue)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{money(r.adjustedRevenue)}</TableCell>
                           <TableCell className="text-right">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(
-                                c.day0Roas
-                              )}`}
-                            >
-                              {roasLabel(c.day0Roas)}
+                            <span className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(r.day0Roas)}`}>
+                              {roasLabel(r.day0Roas)}
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(
-                                c.adjustedRoas
-                              )}`}
-                            >
-                              {roasLabel(c.adjustedRoas)}
+                            <span className={`inline-block px-2 py-0.5 rounded tabular-nums ${roasCellClass(r.adjustedRoas)}`}>
+                              {roasLabel(r.adjustedRoas)}
                             </span>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
-                            {num(c.impressions)}
                           </TableCell>
                         </TableRow>
                       ))}

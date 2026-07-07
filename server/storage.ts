@@ -246,6 +246,7 @@ export interface IStorage {
   getMmmCreativePerformance(days: number): Promise<MmmCreativeRow[]>;
   getMmmCreativeDetail(compoundKey: string, days: number): Promise<MmmPerformanceDaily[]>;
   getMmmDailyTotals(days: number): Promise<MmmDailyTotal[]>;
+  getMmmPerformanceRows(days: number): Promise<MmmPerformanceDaily[]>;
   getMmmRuns(limit: number): Promise<MmmRunLog[]>;
   getMmmLatestRun(): Promise<MmmRunLog | undefined>;
   markMmmRunFailed(id: number, error: string): Promise<void>;
@@ -1256,6 +1257,15 @@ export class DatabaseStorage implements IStorage {
         activeDays: Number(r.activeDays) || 0,
       };
     });
+  }
+
+  async getMmmPerformanceRows(days: number): Promise<MmmPerformanceDaily[]> {
+    const cutoff = this.mmmCutoff(days);
+    return db
+      .select()
+      .from(mmmPerformanceDaily)
+      .where(gte(mmmPerformanceDaily.date, cutoff))
+      .orderBy(desc(mmmPerformanceDaily.date), desc(mmmPerformanceDaily.totalRevenue));
   }
 
   async getMmmCreativeDetail(compoundKey: string, days: number): Promise<MmmPerformanceDaily[]> {
