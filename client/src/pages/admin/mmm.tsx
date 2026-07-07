@@ -249,6 +249,14 @@ export default function Mmm() {
   const latest = runsData?.latest;
   const runActive = isRunActive(latest);
 
+  const dataRange = (() => {
+    if (dailyTotals.length === 0) return null;
+    const sorted = [...dailyTotals].map((d) => d.date).sort();
+    const first = shortDate(sorted[0]);
+    const last = shortDate(sorted[sorted.length - 1]);
+    return first === last ? first : `${first} – ${last}`;
+  })();
+
   const metaRows = creatives.filter((c) => c.platform === "Meta");
   const googleRows = creatives.filter((c) => c.platform === "Google");
   const metaSpendMissing = metaRows.length > 0 && metaRows.every((c) => c.spend === 0);
@@ -262,6 +270,9 @@ export default function Mmm() {
           <h1 className="text-2xl font-bold">Ad Revenue Intelligence</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Creative-level spend vs. revenue across Meta, Google, and offer sources.
+            {dataRange && (
+              <span className="ml-2 font-medium text-foreground">Data: {dataRange}</span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
