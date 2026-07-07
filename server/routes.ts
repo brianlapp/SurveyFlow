@@ -2364,6 +2364,7 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
         storage.getMmmDailyTotals(days),
         storage.getMmmPerformanceRows(days),
       ]);
+      res.set("Cache-Control", "no-store");
       res.json({ days, creatives, dailyTotals, rows });
     } catch (error) {
       console.error("Error fetching MMM performance:", error);
