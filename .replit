@@ -45,3 +45,15 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+META_ACCESS_TOKEN = "EAANiEbz20ScBRQzwN75qepQ756Gu6mIMAdEylNHsSs77JS8zAYodejroMifJbjld11XETtOG99W8W8sjuUoAwLAshcAsYT17sytHiZBKr9hRnyGbtjtbMY4kZCmrr5wZC7HKx1zy22ZAQ5wAQaUiaMtnCQ5jTTB5v53oelWr8C913dgD4FSM6sOwmA1mTkdb"
+META_AD_ACCOUNT_ID = "act_1224818999387790"
+AFTEROFFERS_USERNAME = "mike.debutte@modemobile.com"
+AFTEROFFERS_PASSWORD = "rwFRUkpLt4KvQPm8"
+INTERACTIVE_OFFERS_USERNAME = "affiliate@modemobile.com"
+INTERACTIVE_OFFERS_PASSWORD = "phw9xzp2xqk_xth_ZEQ"
+ZENECT_USERNAME = "mike.debutte@modemobile.com"
+ZENECT_PASSWORD = "Canada1#"
