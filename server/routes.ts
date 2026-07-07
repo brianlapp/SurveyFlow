@@ -2397,6 +2397,39 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
     }
   });
 
+  // Public, token-gated read endpoint for the standalone Netlify revenue report.
+  // The Netlify Function proxies here with a shared bearer token (MMM_REPORT_TOKEN)
+  // so the browser never sees the secret and no cross-origin session is needed.
+  // Read-only; returns everything the report renders in a single call.
+  app.get('/api/report/mmm', async (req, res) => {
+    try {
+      const token = process.env.MMM_REPORT_TOKEN;
+      const auth = req.headers.authorization;
+      if (!token || auth !== `Bearer ${token}`) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const days = parseDays(req.query.days, 30);
+      const [creatives, dailyTotals, rows, latest] = await Promise.all([
+        storage.getMmmCreativePerformance(days),
+        storage.getMmmDailyTotals(days),
+        storage.getMmmPerformanceRows(days),
+        storage.getMmmLatestRun(),
+      ]);
+      res.set("Cache-Control", "no-store");
+      res.json({
+        days,
+        creatives,
+        dailyTotals,
+        rows,
+        latest,
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error fetching MMM report:", error);
+      res.status(500).json({ message: "Failed to fetch MMM report" });
+    }
+  });
+
   const MMM_RUN_STALE_MS = 30 * 60 * 1000; // a "running" row older than this is stale
 
   app.post('/api/mmm/run', isAuthenticated, async (_req, res) => {
