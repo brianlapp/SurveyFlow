@@ -249,6 +249,12 @@ export default function Mmm() {
   const latest = runsData?.latest;
   const runActive = isRunActive(latest);
 
+  const metaRows = creatives.filter((c) => c.platform === "Meta");
+  const googleRows = creatives.filter((c) => c.platform === "Google");
+  const metaSpendMissing = metaRows.length > 0 && metaRows.every((c) => c.spend === 0);
+  const googleApiMissing = googleRows.length > 0 && googleRows.every((c) => c.impressions === 0);
+  const showDataWarning = metaSpendMissing || googleApiMissing;
+
   return (
     <div className="p-6 space-y-6" data-testid="page-mmm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -363,6 +369,33 @@ export default function Mmm() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Data quality notice — shown only when credentials are partially missing */}
+          {showDataWarning && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-sm space-y-1.5">
+              <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-400">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Spend data is partially estimated — some ad platform credentials are not yet connected
+              </div>
+              <ul className="ml-6 space-y-1 text-amber-700 dark:text-amber-500 list-disc">
+                {metaSpendMissing && (
+                  <li>
+                    <span className="font-medium">Meta spend shows $0</span> — the Meta access token is
+                    expired or not set. Meta creatives are running but spend cannot be pulled until a
+                    valid token is provided.
+                  </li>
+                )}
+                {googleApiMissing && (
+                  <li>
+                    <span className="font-medium">Google &amp; Taboola spend is a rough estimate</span> —
+                    the Google Ads API is not connected, so the daily sheet total is split across
+                    creatives proportionally. Individual creative spend and ROAS figures are
+                    approximations until Google Ads OAuth credentials are added.
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
 
           {/* Daily trend */}
           <Card>
