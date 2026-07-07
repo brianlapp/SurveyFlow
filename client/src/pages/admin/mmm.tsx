@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -7,7 +7,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -33,11 +32,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   RefreshCw,
-  Play,
+  Clock,
   TrendingUp,
   DollarSign,
   Activity,
@@ -187,9 +184,9 @@ const isRunActive = (run: RunLog | null | undefined) => {
 };
 
 export default function Mmm() {
-  const { toast } = useToast();
   const [days, setDays] = useState("30");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState("");
 
   const { data: perf, isLoading: perfLoading } = useQuery<PerformanceResponse>({
     queryKey: [`/api/mmm/performance?days=${days}`],
@@ -208,29 +205,24 @@ export default function Mmm() {
     enabled: !!selectedKey,
   });
 
-  const runMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/mmm/run");
-    },
-    onSuccess: () => {
-      toast({
-        title: "Pipeline run started",
-        description:
-          "An intraday refresh is running in the background. Status updates below.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/mmm/runs?limit=50"] });
-    },
-    onError: (err: Error) => {
-      const already = err.message.includes("409");
-      toast({
-        title: already ? "Run already in progress" : "Failed to start run",
-        description: already
-          ? "Wait for the current run to finish before starting another."
-          : err.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Tick countdown to next scheduled intraday run (every 2 h on the UTC even-hour mark).
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now();
+      const intervalMs = 2 * 3600_000;
+      const msUntil = intervalMs - (now % intervalMs);
+      const totalSec = Math.floor(msUntil / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      setCountdown(
+        `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`,
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const creatives = perf?.creatives ?? [];
   const dailyTotals = perf?.dailyTotals ?? [];
@@ -278,18 +270,23 @@ export default function Mmm() {
               <SelectItem value="90">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            onClick={() => runMutation.mutate()}
-            disabled={runMutation.isPending || runActive}
-            data-testid="button-run-now"
+          <div
+            className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+            data-testid="next-run-countdown"
           >
-            {runMutation.isPending || runActive ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            {runActive ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                <span className="text-blue-600 dark:text-blue-400 font-medium">Running now…</span>
+              </>
             ) : (
-              <Play className="h-4 w-4 mr-2" />
+              <>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Next run in</span>
+                <span className="font-mono font-semibold tabular-nums">{countdown}</span>
+              </>
             )}
-            Run Now
-          </Button>
+          </div>
         </div>
       </div>
 
@@ -580,7 +577,7 @@ export default function Mmm() {
                 </div>
               ) : (runsData?.runs ?? []).length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground text-sm">
-                  No pipeline runs yet. Click "Run Now" to trigger an intraday refresh.
+                  No pipeline runs yet. The pipeline runs automatically every 2 hours.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
