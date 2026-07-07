@@ -595,8 +595,11 @@ export default function Mmm() {
             <CardHeader>
               <CardTitle className="text-base">Run History</CardTitle>
               <CardDescription>
-                Daily and intraday pipeline runs. Runs also fire automatically on a
-                schedule.
+                Each run scrapes <strong>all connected sources</strong> (IMS, AfterOffers, Interactive Offers, Zenect, Meta, Google) and joins spend to revenue.
+                <span className="block mt-1 text-xs">
+                  <strong>Daily</strong> — full scrape including Google Sheet revenue (runs ~9 AM EST) &nbsp;·&nbsp;
+                  <strong>Intraday</strong> — quick refresh without Sheet (runs every 2 hours)
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -615,11 +618,11 @@ export default function Mmm() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead>Run Type</TableHead>
+                        <TableHead>Data Date</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Started</TableHead>
-                        <TableHead className="text-right">Joined</TableHead>
+                        <TableHead className="text-right">Creatives Matched</TableHead>
                         <TableHead className="text-right">Spend</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
                       </TableRow>
@@ -627,7 +630,7 @@ export default function Mmm() {
                     <TableBody>
                       {(runsData?.runs ?? []).map((r) => (
                         <TableRow key={r.id} data-testid={`row-run-${r.id}`}>
-                          <TableCell className="capitalize">{r.runType}</TableCell>
+                          <TableCell className="capitalize font-medium">{r.runType}</TableCell>
                           <TableCell>{r.runDate}</TableCell>
                           <TableCell>
                             <RunStatusBadge status={r.status} />
