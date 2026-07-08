@@ -10,6 +10,9 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { spawn } from "child_process";
 import path from "path";
+import os from "os";
+import fs from "fs";
+import express from "express";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -2518,6 +2521,64 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
       res.status(500).json({ message: "Failed to trigger run" });
     }
   });
+
+  // Bulk-import Meta ad spend from a Meta Ads Manager CSV export. Interim
+  // replacement for the dead Meta Marketing API (code 190). Authorized by the
+  // shared MMM_REPORT_TOKEN (same as /api/report/run) so the Netlify report can
+  // proxy an operator's upload. The CSV arrives as the raw request body; we spool
+  // it to a temp file and run the Python importer, which upserts Meta spend into
+  // mmm_ad_spend (deriving the same compound_key the live API produced) and
+  // recomputes mmm_performance_daily for the affected dates. Synchronous — runs
+  // in the deployment context, so DATABASE_URL already points at the report's Neon.
+  app.post(
+    '/api/report/import-meta',
+    express.text({ type: () => true, limit: '25mb' }),
+    async (req, res) => {
+      try {
+        const token = process.env.MMM_REPORT_TOKEN;
+        if (!token || req.headers.authorization !== `Bearer ${token}`) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+        const csv = typeof req.body === "string" ? req.body : "";
+        if (!csv || csv.length < 50 || !csv.toLowerCase().includes("ad name")) {
+          return res.status(400).json({ message: "Missing or unrecognized Meta CSV body" });
+        }
+
+        const pkgDir = path.join(process.cwd(), "mmm-pipeline-package");
+        const tmpFile = path.join(os.tmpdir(), `meta-import-${Date.now()}.csv`);
+        await fs.promises.writeFile(tmpFile, csv, "utf8");
+
+        const stdout = await new Promise<string>((resolve, reject) => {
+          let out = "";
+          let err = "";
+          const child = spawn("python3", ["-m", "pipeline.import_meta_csv", tmpFile], {
+            cwd: pkgDir,
+            stdio: ["ignore", "pipe", "pipe"],
+            env: process.env,
+          });
+          child.stdout.on("data", (d) => (out += d.toString()));
+          child.stderr.on("data", (d) => (err += d.toString()));
+          child.on("error", reject);
+          child.on("exit", (code) =>
+            code === 0 ? resolve(out) : reject(new Error(err || out || `python exit ${code}`)),
+          );
+        });
+        await fs.promises.unlink(tmpFile).catch(() => {});
+
+        // Extract the machine-readable summary line the importer emits.
+        let summary: unknown = null;
+        const marker = stdout.lastIndexOf("IMPORT_SUMMARY: ");
+        if (marker !== -1) {
+          const line = stdout.slice(marker + "IMPORT_SUMMARY: ".length).split("\n")[0];
+          try { summary = JSON.parse(line); } catch { /* leave raw output */ }
+        }
+        res.status(200).json({ message: "Meta CSV imported", summary, output: stdout });
+      } catch (error) {
+        console.error("Meta CSV import failed:", error);
+        res.status(500).json({ message: "Import failed", error: String(error) });
+      }
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;
