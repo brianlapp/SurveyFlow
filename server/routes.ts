@@ -2480,6 +2480,45 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
     }
   });
 
+  // Token-gated pipeline trigger for the standalone Netlify report's Refresh
+  // button. Mirrors /api/mmm/run but authorized by MMM_REPORT_TOKEN instead of a
+  // session. Runs synchronously so Autoscale doesn't kill the child; the caller
+  // (a Netlify background function) holds the connection for the full ~60-90s.
+  app.post('/api/report/run', async (req, res) => {
+    try {
+      const token = process.env.MMM_REPORT_TOKEN;
+      if (!token || req.headers.authorization !== `Bearer ${token}`) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const latest = await storage.getMmmLatestRun();
+      if (latest && latest.status === "running") {
+        const startedMs = latest.startedAt ? new Date(latest.startedAt).getTime() : 0;
+        const isFresh = startedMs > 0 && Date.now() - startedMs < MMM_RUN_STALE_MS;
+        if (isFresh) {
+          return res.status(409).json({ message: "A pipeline run is already in progress" });
+        }
+        await storage.markMmmRunFailed(
+          latest.id,
+          "Marked stale: run process died before completing",
+        );
+      }
+      const pkgDir = path.join(process.cwd(), "mmm-pipeline-package");
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn("python3", ["pipeline/run_intraday.py"], {
+          cwd: pkgDir,
+          stdio: ["ignore", "inherit", "inherit"],
+          env: process.env,
+        });
+        child.on("error", reject);
+        child.on("exit", () => resolve());
+      });
+      res.status(200).json({ message: "Intraday pipeline run complete" });
+    } catch (error) {
+      console.error("Error triggering MMM report run:", error);
+      res.status(500).json({ message: "Failed to trigger run" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
