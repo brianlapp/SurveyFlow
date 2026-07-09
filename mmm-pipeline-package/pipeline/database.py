@@ -17,9 +17,9 @@ import psycopg2.extras
 
 
 def get_connection():
-    dsn = os.environ.get("DATABASE_URL")
+    dsn = os.environ.get("NEON_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not dsn:
-        raise RuntimeError("DATABASE_URL is not set")
+        raise RuntimeError("Neither NEON_DATABASE_URL nor DATABASE_URL is set")
     conn = psycopg2.connect(dsn)
     return conn
 
