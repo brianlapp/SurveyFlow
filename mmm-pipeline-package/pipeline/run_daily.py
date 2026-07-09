@@ -23,6 +23,7 @@ from scrapers.ims_scraper import pull_ims_revenue
 from scrapers.afteroffers_scraper import pull_afteroffers_revenue
 from scrapers.interactive_offers_scraper import pull_interactive_offers
 from scrapers.zenect_scraper import pull_zenect
+from scrapers.taboola_puller import pull_taboola_spend
 from scrapers.sheets_reader import pull_sheet_data
 from pipeline.database import (
     init_db, clear_date, insert_meta_rows, insert_google_rows,
@@ -169,6 +170,20 @@ def run(target_date=None):
     except Exception as e:
         log(f"  Zenect FAILED: {e}")
         errors.append(f"zenect: {e}")
+
+    # --- Taboola: prefer the live Backstage API over the sheet ---
+    # The sheet's Taboola column is manually maintained and often lags; use the
+    # API value when it returns spend, keeping the sheet as the fallback.
+    log("Pulling Taboola spend (API)...")
+    try:
+        api_taboola = pull_taboola_spend(creds, target_date)
+        if api_taboola > 0:
+            if sheets_result is None:
+                sheets_result = {}
+            sheets_result["taboola_spend"] = api_taboola
+    except Exception as e:
+        log(f"  Taboola FAILED: {e}")
+        errors.append(f"taboola: {e}")
 
     # --- Join & persist relational snapshot ---
     log("Joining data and writing performance snapshot...")

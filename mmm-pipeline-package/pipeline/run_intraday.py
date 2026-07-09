@@ -27,6 +27,7 @@ from scrapers.ims_scraper import pull_ims_revenue
 from scrapers.afteroffers_scraper import pull_afteroffers_revenue
 from scrapers.interactive_offers_scraper import pull_interactive_offers
 from scrapers.zenect_scraper import pull_zenect
+from scrapers.taboola_puller import pull_taboola_spend
 from config.config import load_credentials
 
 EST = ZoneInfo("America/New_York")
@@ -105,9 +106,12 @@ def run():
     except Exception as e:
         log(f"  Zenect FAILED: {e}"); errors.append(f"zenect: {e}")
 
-    # Google/Taboola: $0 intraday (sheet not available until end of day)
-    sheets_result = {"google_spend": 0.0, "taboola_spend": 0.0}
-    log("  Google=$0.00  Taboola=$0.00 (sheet not available intraday)")
+    # Google agency spend still $0 intraday (its sheet isn't available until EOD).
+    # Taboola now comes live from the Backstage API instead of that sheet.
+    log("Pulling Taboola spend (today)...")
+    taboola_spend = pull_taboola_spend(creds, today)
+    sheets_result = {"google_spend": 0.0, "taboola_spend": taboola_spend}
+    log(f"  Google=$0.00 (sheet n/a intraday)  Taboola=${taboola_spend:.2f} (API)")
 
     # --- Join & persist relational snapshot ---
     log("Joining data and writing performance snapshot...")

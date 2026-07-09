@@ -96,5 +96,12 @@ def load_credentials():
             "login_customer_id": _env("GOOGLE_ADS_LOGIN_CUSTOMER_ID"),
             "customer_id": _env("GOOGLE_ADS_CUSTOMER_ID"),
         },
+        "taboola": {
+            # Taboola Backstage API (OAuth2 client_credentials). account_id is the
+            # Backstage account slug the campaigns live under.
+            "client_id": _env("TABOOLA_CLIENT_ID"),
+            "client_secret": _env("TABOOLA_CLIENT_SECRET"),
+            "account_id": _env("TABOOLA_ACCOUNT_ID"),
+        },
         "spreadsheet_id": GOOGLE_SPREADSHEET_ID,
     }
