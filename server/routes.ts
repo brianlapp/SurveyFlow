@@ -2522,6 +2522,55 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
     }
   });
 
+  // Token-gated DAILY FINALIZE. Runs run_daily — the reconciliation that turns a
+  // live/partial day into finished numbers (Interactive Offers + Zenect "Yesterday"
+  // totals, sheet spend, AI summary). Mirrors /api/report/run but runs run_daily
+  // instead of run_intraday, so an external cron can close each day with no manual
+  // SSH — this is what stops days from sitting on partial intraday captures. With
+  // no body it finalizes yesterday (EST); an optional { "date": "YYYY-MM-DD" }
+  // targets a specific past day (backfill). Runs in the deployment context, so the
+  // portal creds (.replit [userenv.shared]) and the report Neon are already wired.
+  // NOTE: run_daily zeroes Meta spend (dead API) — a day that already had a Meta
+  // CSV imported would need re-import; yesterday won't yet, so the nightly run is
+  // safe.
+  app.post('/api/report/finalize', async (req, res) => {
+    try {
+      const token = process.env.MMM_REPORT_TOKEN;
+      if (!token || req.headers.authorization !== `Bearer ${token}`) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const latest = await storage.getMmmLatestRun();
+      if (latest && latest.status === "running") {
+        const startedMs = latest.startedAt ? new Date(latest.startedAt).getTime() : 0;
+        const isFresh = startedMs > 0 && Date.now() - startedMs < MMM_RUN_STALE_MS;
+        if (isFresh) {
+          return res.status(409).json({ message: "A pipeline run is already in progress" });
+        }
+        await storage.markMmmRunFailed(
+          latest.id,
+          "Marked stale: run process died before completing",
+        );
+      }
+      const rawDate = typeof req.body?.date === "string" ? req.body.date.trim() : "";
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : undefined;
+      const pkgDir = path.join(process.cwd(), "mmm-pipeline-package");
+      const args = date ? ["pipeline/run_daily.py", date] : ["pipeline/run_daily.py"];
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn("python3", args, {
+          cwd: pkgDir,
+          stdio: ["ignore", "inherit", "inherit"],
+          env: process.env,
+        });
+        child.on("error", reject);
+        child.on("exit", () => resolve());
+      });
+      res.status(200).json({ message: "Daily finalize complete", date: date ?? "yesterday" });
+    } catch (error) {
+      console.error("Error triggering MMM daily finalize:", error);
+      res.status(500).json({ message: "Failed to trigger daily finalize" });
+    }
+  });
+
   // Bulk-import Meta ad spend from a Meta Ads Manager CSV export. Interim
   // replacement for the dead Meta Marketing API (code 190). Authorized by the
   // shared MMM_REPORT_TOKEN (same as /api/report/run) so the Netlify report can
