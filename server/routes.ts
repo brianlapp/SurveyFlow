@@ -2486,7 +2486,8 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
   // Token-gated pipeline trigger for the standalone Netlify report's Refresh
   // button. Mirrors /api/mmm/run but authorized by MMM_REPORT_TOKEN instead of a
   // session. Runs synchronously so Autoscale doesn't kill the child; the caller
-  // (a Netlify background function) holds the connection for the full ~60-90s.
+  // (a Netlify background function, holds up to ~15min) waits the full run —
+  // ~60-90s to refresh today, plus another ~90s if it also finalizes yesterday.
   app.post('/api/report/run', async (req, res) => {
     try {
       const token = process.env.MMM_REPORT_TOKEN;
@@ -2506,16 +2507,55 @@ Make questions engaging and relevant for consumer surveys. Include a mix of ques
         );
       }
       const pkgDir = path.join(process.cwd(), "mmm-pipeline-package");
-      await new Promise<void>((resolve, reject) => {
-        const child = spawn("python3", ["pipeline/run_intraday.py"], {
-          cwd: pkgDir,
-          stdio: ["ignore", "inherit", "inherit"],
-          env: process.env,
+      const runPy = (args: string[]) =>
+        new Promise<void>((resolve, reject) => {
+          const child = spawn("python3", args, {
+            cwd: pkgDir,
+            stdio: ["ignore", "inherit", "inherit"],
+            env: process.env,
+          });
+          child.on("error", reject);
+          child.on("exit", () => resolve());
         });
-        child.on("error", reject);
-        child.on("exit", () => resolve());
+
+      // 1) Refresh TODAY's live numbers (intraday).
+      await runPy(["pipeline/run_intraday.py"]);
+
+      // 2) Also CLOSE OUT YESTERDAY if it isn't finalized yet. One button that
+      // "just works": intraday only ever touches today, so a day that never got
+      // its daily reconciliation would otherwise sit on partial numbers (this is
+      // how Interactive Offers read low). We finalize yesterday only when it
+      // lacks a successful daily run — idempotent, and skipping-when-done avoids
+      // re-zeroing an already-imported Meta CSV.
+      let finalizedYesterday = false;
+      try {
+        const todayEt = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "America/New_York",
+          year: "numeric", month: "2-digit", day: "2-digit",
+        }).format(new Date());
+        const [yy, mm, dd] = todayEt.split("-").map(Number);
+        const yd = new Date(Date.UTC(yy, mm - 1, dd));
+        yd.setUTCDate(yd.getUTCDate() - 1);
+        const yesterday = yd.toISOString().slice(0, 10);
+
+        const recentRuns = await storage.getMmmRuns(100);
+        const alreadyFinal = recentRuns.some(
+          (r) => r.runType === "daily" && r.runDate === yesterday && r.status === "success",
+        );
+        if (!alreadyFinal) {
+          await runPy(["pipeline/run_daily.py", yesterday]);
+          finalizedYesterday = true;
+        }
+      } catch (e) {
+        console.error("auto-finalize yesterday after refresh failed:", e);
+      }
+
+      res.status(200).json({
+        message: finalizedYesterday
+          ? "Refreshed today and finalized yesterday"
+          : "Intraday pipeline run complete",
+        finalizedYesterday,
       });
-      res.status(200).json({ message: "Intraday pipeline run complete" });
     } catch (error) {
       console.error("Error triggering MMM report run:", error);
       res.status(500).json({ message: "Failed to trigger run" });
