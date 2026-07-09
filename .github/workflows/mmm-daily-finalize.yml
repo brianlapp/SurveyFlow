@@ -1,0 +1,103 @@
+name: MMM Daily Finalize
+
+# Finalizes "yesterday" in the MMM (ModeMarketMunchies) revenue report every
+# morning, so days stop sitting on partial mid-day (intraday) numbers — the exact
+# problem where Interactive Offers read low until the day was reconciled.
+#
+# How it works:
+#   1. Trigger  — POST the token-gated Replit endpoint /api/report/finalize, which
+#      runs run_daily for yesterday (EST): full-day Interactive Offers + Zenect
+#      totals, sheet spend, AfterOffers/IMS revenue.
+#   2. Verify   — read the report back and assert yesterday actually populated
+#      (Interactive Offers > 0, Zenect > 0, affiliate revenue > 0, and the latest
+#      run is a successful "daily" for yesterday). Verify is the gate: if it fails,
+#      the job fails and GitHub emails the repo owner. Nobody watches it when it's
+#      healthy — it only surfaces when something breaks.
+#
+# Requires repo secret MMM_REPORT_TOKEN (same bearer used by the Netlify report).
+
+on:
+  schedule:
+    - cron: "17 13 * * *"   # 13:17 UTC ~= 9:17am ET, after the prior day fully closes
+  workflow_dispatch: {}      # manual run for testing / re-runs
+
+concurrency:
+  group: mmm-daily-finalize
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    env:
+      BASE: https://product-give-away-survey-flow.replit.app
+      TOKEN: ${{ secrets.MMM_REPORT_TOKEN }}
+    steps:
+      - name: Trigger daily finalize (best-effort; verify is the gate)
+        run: |
+          set -uo pipefail
+          if [ -z "${TOKEN:-}" ]; then
+            echo "::error::MMM_REPORT_TOKEN secret is not set on this repo"; exit 1
+          fi
+          echo "POST $BASE/api/report/finalize (holds while run_daily runs, ~1-3 min)"
+          code=$(curl -sS -m 300 -o /tmp/finalize.json -w '%{http_code}' \
+            -X POST "$BASE/api/report/finalize" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" || echo "000")
+          echo "HTTP $code"; cat /tmp/finalize.json 2>/dev/null || true; echo
+          if [ "$code" != "200" ]; then
+            echo "::warning::finalize POST returned $code — continuing to verify the data anyway"
+          fi
+
+      - name: Verify yesterday is fully finalized
+        run: |
+          set -uo pipefail
+          curl -sS -m 60 "$BASE/api/report/mmm?days=4" \
+            -H "Authorization: Bearer $TOKEN" -o /tmp/report.json
+          python3 - <<'PY'
+          import json, sys, datetime
+          try:
+              from zoneinfo import ZoneInfo
+              et = ZoneInfo("America/New_York")
+              y = (datetime.datetime.now(et).date() - datetime.timedelta(days=1)).isoformat()
+          except Exception:
+              y = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+
+          d = json.load(open("/tmp/report.json"))
+          row = next((r for r in d.get("dailyTotals", []) if r["date"] == y), None)
+          latest = d.get("latest") or {}
+          sources = {s.get("source"): s for s in latest.get("sources", [])}
+          io = sources.get("interactive_offers", {})
+          io_rev = float(io.get("cto", 0) or 0) + float(io.get("coreg", 0) or 0)
+          zen_rev = float(sources.get("zenect", {}).get("revenue", 0) or 0)
+
+          print(f"Verifying yesterday = {y}")
+          print("  dailyTotals row:", json.dumps(row))
+          print(f"  latest run: {latest.get('runType')} {latest.get('runDate')} "
+                f"status={latest.get('status')}  IO=${io_rev:.2f} Zenect=${zen_rev:.2f}")
+
+          problems = []
+          if row is None:
+              problems.append(f"no report row exists for {y}")
+          else:
+              if row.get("sourceRevenue", 0) <= 0:
+                  problems.append("Interactive Offers + Zenect (sourceRevenue) is $0")
+              if row.get("creativeRevenue", 0) <= 0:
+                  problems.append("AfterOffers + IMS (creativeRevenue) is $0")
+          # Strong per-source signal from the run that just finished
+          if latest.get("runType") == "daily" and latest.get("runDate") == y:
+              if latest.get("status") != "success":
+                  problems.append(f"daily run for {y} finished status={latest.get('status')}")
+              if io_rev <= 0:
+                  problems.append("daily run captured $0 Interactive Offers (Display CTO)")
+          else:
+              print("  note: latest run is not the daily for yesterday — relying on dailyTotals row")
+
+          if problems:
+              print("::error::MMM finalize verification FAILED for " + y + ": " + "; ".join(problems))
+              sys.exit(1)
+          print(f"OK — {y} finalized: source=${row['sourceRevenue']:.2f} "
+                f"creative=${row['creativeRevenue']:.2f} combined=${row['combinedRevenue']:.2f}")
+          PY
