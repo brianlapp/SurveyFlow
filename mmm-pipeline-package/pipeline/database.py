@@ -17,9 +17,14 @@ import psycopg2.extras
 
 
 def get_connection():
-    dsn = os.environ.get("DATABASE_URL")
+    # The report reads the Neon behind NEON_DATABASE_URL. In the Replit workspace
+    # DATABASE_URL points at the throwaway dev DB (helium), so a run there would
+    # silently write to the wrong database and leave the report empty (the
+    # "two-database trap"). Always prefer NEON_DATABASE_URL when present so every
+    # context — Scheduled Deployment, Run Now, manual backfill — writes the report DB.
+    dsn = os.environ.get("NEON_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not dsn:
-        raise RuntimeError("DATABASE_URL is not set")
+        raise RuntimeError("Neither NEON_DATABASE_URL nor DATABASE_URL is set")
     conn = psycopg2.connect(dsn)
     return conn
 
