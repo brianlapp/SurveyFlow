@@ -105,9 +105,12 @@ def run():
     except Exception as e:
         log(f"  Zenect FAILED: {e}"); errors.append(f"zenect: {e}")
 
-    # Google/Taboola: $0 intraday (sheet not available until end of day)
-    sheets_result = {"google_spend": 0.0, "taboola_spend": 0.0}
-    log("  Google=$0.00  Taboola=$0.00 (sheet not available intraday)")
+    # Google/Taboola: don't touch them here. Passing {0,0} would upsert today's
+    # mmm_daily_spend to $0 and WIPE any real Taboola/Google already written
+    # (the Netlify refresh fn + the daily GitHub Action pull real Taboola). Pass
+    # None so export_data preserves the saved values via get_daily_spend().
+    sheets_result = None
+    log("  Google/Taboola: preserving saved daily_spend (not zeroed intraday)")
 
     # --- Join & persist relational snapshot ---
     log("Joining data and writing performance snapshot...")
