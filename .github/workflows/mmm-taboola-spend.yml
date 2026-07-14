@@ -1,0 +1,91 @@
+name: MMM Taboola Spend
+
+# Pulls REAL Taboola advertiser spend from the Backstage API and writes it
+# straight into the report's Neon DB (mmm_daily_spend.taboola_spend). Fully
+# self-contained — no Replit deploy, no Google Sheet, no manual entry.
+#
+# Why the report needs this: Taboola spend used to be hand-typed into a Google
+# Sheet by Mike (often late or missing). As of 2026-07-13 our Backstage API user
+# was moved to the advertiser network (modemobile-network), so we can pull it.
+# NOTE: campaign-summary still 403s for our scope; the top-campaign-content report
+# is the one that works and carries per-creative `spent`.
+#
+# Runs AFTER MMM Daily Finalize (13:17 UTC). If finalize's run_daily wrote the
+# stale/blank SHEET value for Taboola, this overwrites it with the authoritative
+# API value, so the API always wins. Pulls the last 4 days each run (self-healing
+# against late spend revisions + any gaps).
+#
+# Requires repo secrets: TABOOLA_CLIENT_ID, TABOOLA_CLIENT_SECRET, NEON_DATABASE_URL
+
+on:
+  schedule:
+    - cron: "45 13 * * *"   # 13:45 UTC ~= 9:45am ET, after MMM Daily Finalize (13:17)
+  workflow_dispatch: {}      # manual run for testing / re-runs
+
+concurrency:
+  group: mmm-taboola-spend
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  taboola-spend:
+    runs-on: ubuntu-latest
+    env:
+      TABOOLA_CLIENT_ID: ${{ secrets.TABOOLA_CLIENT_ID }}
+      TABOOLA_CLIENT_SECRET: ${{ secrets.TABOOLA_CLIENT_SECRET }}
+      NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+    steps:
+      - name: Install psycopg2
+        run: pip install --quiet "psycopg2-binary==2.9.9"
+
+      - name: Pull Taboola spend -> report DB
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request, urllib.parse, datetime, sys
+          import psycopg2
+
+          cid = os.environ.get("TABOOLA_CLIENT_ID")
+          sec = os.environ.get("TABOOLA_CLIENT_SECRET")
+          neon = os.environ.get("NEON_DATABASE_URL")
+          if not (cid and sec and neon):
+              print("::error::missing TABOOLA_CLIENT_ID / TABOOLA_CLIENT_SECRET / NEON_DATABASE_URL secret")
+              sys.exit(1)
+
+          B = "https://backstage.taboola.com/backstage/api/1.0"
+          ACCOUNT = "modemobile-network"   # advertiser network; rolls up all MMM sub-accounts
+
+          def api(url, data=None, token=None):
+              headers = {"Authorization": f"Bearer {token}"} if token else {}
+              body = urllib.parse.urlencode(data).encode() if data else None
+              return json.load(urllib.request.urlopen(
+                  urllib.request.Request(url, data=body, headers=headers), timeout=40))
+
+          token = api("https://backstage.taboola.com/backstage/oauth/token",
+                      {"client_id": cid, "client_secret": sec,
+                       "grant_type": "client_credentials"})["access_token"]
+
+          # Last 4 days (self-healing against late revisions + gaps)
+          today = datetime.date.today()
+          days = [(today - datetime.timedelta(days=i)).isoformat() for i in range(1, 5)]
+
+          rows = {}
+          for d in days:
+              url = (f"{B}/{ACCOUNT}/reports/top-campaign-content/dimensions/item_breakdown"
+                     f"?start_date={d}&end_date={d}")
+              res = api(url, token=token).get("results", []) or []
+              rows[d] = round(sum(float(r.get("spent", 0) or 0) for r in res), 2)
+              print(f"  {d}: ${rows[d]:.2f} ({len(res)} creatives)")
+
+          conn = psycopg2.connect(neon)
+          conn.autocommit = True
+          with conn.cursor() as cur:
+              for d, spend in rows.items():
+                  cur.execute(
+                      "INSERT INTO mmm_daily_spend (date, taboola_spend) VALUES (%s, %s) "
+                      "ON CONFLICT (date) DO UPDATE SET taboola_spend = EXCLUDED.taboola_spend",
+                      (d, spend))
+          conn.close()
+          print(f"OK — wrote Taboola spend for {len(rows)} days to report DB")
+          PY
