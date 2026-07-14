@@ -55,8 +55,14 @@ def pull_taboola_spend(creds, target_date):
     tab = (creds or {}).get("taboola", {})
     client_id = tab.get("client_id")
     client_secret = tab.get("client_secret")
+    # Force the advertiser network. The old TABOOLA_ACCOUNT_ID secret is the
+    # publisher account (modefreefinds-network), which 403s on advertiser reports.
+    # All MMM spend rolls up under modemobile-network, so ignore a stale/publisher
+    # secret and don't require the Replit secret to be changed for this to work.
     account_id = tab.get("account_id")
-    if not (client_id and client_secret and account_id):
+    if not account_id or account_id == "modefreefinds-network":
+        account_id = "modemobile-network"
+    if not (client_id and client_secret):
         print("  Taboola: credentials not configured — skipping (spend $0)")
         return 0.0
 
