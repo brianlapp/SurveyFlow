@@ -18,7 +18,11 @@ name: MMM Daily Finalize
 
 on:
   schedule:
-    - cron: "17 13 * * *"   # 13:17 UTC ~= 9:17am ET, after the prior day fully closes
+    # GitHub scheduled runs fire 1-3h LATE, so a single 13:17 run left yesterday
+    # hollow every morning until ~11am-12pm ET. Fire multiple early attempts
+    # (odd minute dodges top-of-hour load) — run_daily is idempotent (clear +
+    # re-insert), so re-runs are safe and the first one to land closes the gap.
+    - cron: "7 8,11,14 * * *"  # 08:07/11:07/14:07 UTC = 4:07/7:07/10:07 ET
   workflow_dispatch: {}      # manual run for testing / re-runs
 
 concurrency:
