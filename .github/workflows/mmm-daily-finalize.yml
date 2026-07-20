@@ -58,8 +58,29 @@ jobs:
       - name: Verify yesterday is fully finalized
         run: |
           set -uo pipefail
-          curl -sS -m 60 "$BASE/api/report/mmm?days=4" \
-            -H "Authorization: Bearer $TOKEN" -o /tmp/report.json
+          # The finalize POST above is usually cut off by Replit's gateway (~30-60s)
+          # while run_daily keeps running detached, so the "latest" run can still be
+          # in-progress here (status=running, sources=null). Poll until that run
+          # settles before judging, so verify checks the FINISHED state — not a race.
+          y=$(python3 - <<'PY'
+          import datetime
+          try:
+              from zoneinfo import ZoneInfo
+              print((datetime.datetime.now(ZoneInfo("America/New_York")).date()
+                     - datetime.timedelta(days=1)).isoformat())
+          except Exception:
+              print((datetime.date.today() - datetime.timedelta(days=1)).isoformat())
+          PY
+          )
+          echo "Waiting for yesterday's ($y) daily run to settle (up to ~7 min)..."
+          for i in $(seq 1 28); do
+            curl -sS -m 60 "$BASE/api/report/mmm?days=4" \
+              -H "Authorization: Bearer $TOKEN" -o /tmp/report.json || true
+            status=$(python3 -c 'import json;l=(json.load(open("/tmp/report.json")).get("latest") or {});print(l.get("status") or "")' 2>/dev/null || echo "")
+            echo "  poll $i: latest status=${status:-<none>}"
+            [ "$status" != "running" ] && break
+            sleep 15
+          done
           python3 - <<'PY'
           import json, sys, datetime
           try:
@@ -70,18 +91,23 @@ jobs:
               y = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
 
           d = json.load(open("/tmp/report.json"))
-          row = next((r for r in d.get("dailyTotals", []) if r["date"] == y), None)
+          row = next((r for r in d.get("dailyTotals", []) if r.get("date") == y), None)
           latest = d.get("latest") or {}
-          sources = {s.get("source"): s for s in latest.get("sources", [])}
-          io = sources.get("interactive_offers", {})
+          # null-safe: an in-progress run reports sources=null (not []), so `or []`
+          sources = {s.get("source"): s for s in (latest.get("sources") or [])}
+          io = sources.get("interactive_offers") or {}
           io_rev = float(io.get("cto", 0) or 0) + float(io.get("coreg", 0) or 0)
-          zen_rev = float(sources.get("zenect", {}).get("revenue", 0) or 0)
+          zen_rev = float((sources.get("zenect") or {}).get("revenue", 0) or 0)
+          settled = latest.get("status") not in ("running", None, "")
 
           print(f"Verifying yesterday = {y}")
           print("  dailyTotals row:", json.dumps(row))
           print(f"  latest run: {latest.get('runType')} {latest.get('runDate')} "
-                f"status={latest.get('status')}  IO=${io_rev:.2f} Zenect=${zen_rev:.2f}")
+                f"status={latest.get('status')}  settled={settled}  "
+                f"IO=${io_rev:.2f} Zenect=${zen_rev:.2f}")
 
+          # PRIMARY gate = yesterday's report row actually has revenue. This is the
+          # real "is it finalized" signal and it survives a slow/hung run.
           problems = []
           if row is None:
               problems.append(f"no report row exists for {y}")
@@ -90,14 +116,17 @@ jobs:
                   problems.append("Interactive Offers + Zenect (sourceRevenue) is $0")
               if row.get("creativeRevenue", 0) <= 0:
                   problems.append("AfterOffers + IMS (creativeRevenue) is $0")
-          # Strong per-source signal from the run that just finished
-          if latest.get("runType") == "daily" and latest.get("runDate") == y:
+          # STRONG per-source check only when the daily run for yesterday has FINISHED.
+          # A still-running run is not a failure — we already trust the row above.
+          if settled and latest.get("runType") == "daily" and latest.get("runDate") == y:
               if latest.get("status") != "success":
                   problems.append(f"daily run for {y} finished status={latest.get('status')}")
-              if io_rev <= 0:
+              elif io_rev <= 0:
                   problems.append("daily run captured $0 Interactive Offers (Display CTO)")
+          elif not settled:
+              print("  note: daily run still in progress after wait — trusting the dailyTotals row")
           else:
-              print("  note: latest run is not the daily for yesterday — relying on dailyTotals row")
+              print("  note: latest run is not the daily for yesterday — trusting the dailyTotals row")
 
           if problems:
               print("::error::MMM finalize verification FAILED for " + y + ": " + "; ".join(problems))
