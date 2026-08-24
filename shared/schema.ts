@@ -3,6 +3,7 @@ import {
   index,
   jsonb,
   pgTable,
+  primaryKey,
   timestamp,
   varchar,
   text,
@@ -739,6 +740,60 @@ export const mmmRunLog = pgTable("mmm_run_log", {
   sources: jsonb("sources"),
   errors: jsonb("errors"),
   aiSummary: text("ai_summary"),
+});
+
+// ===========================================================================
+// ModeFreeFinds (MFF) Ad Revenue tables — source/subsource grain.
+// These live in the SAME shared Neon DB but are written by the separate
+// `mff-revenue-report` ingest scripts and read by that report's Netlify
+// functions; the SurveyFlow Node app does not query them. They are declared
+// here ONLY so Drizzle/Replit's deploy-time schema diff recognizes them as
+// managed tables. Without these definitions, every Publish generated a
+// DESTRUCTIVE migration that tried to DROP all four (see 2026-08-24 incident).
+// Column types mirror production exactly — do not change without matching the DB.
+// ===========================================================================
+
+// Per-day revenue at partner/source/subsource grain (Rokt, Tune, Thanks.co).
+export const mffDailySource = pgTable("mff_daily_source", {
+  date: date("date").notNull(),
+  partner: text("partner").notNull(),
+  source: text("source").notNull().default(""),
+  subsource: text("subsource").notNull().default(""),
+  revenue: decimal("revenue", { precision: 14, scale: 2 }).notNull().default("0"),
+  clicks: integer("clicks").notNull().default(0),
+  impressions: integer("impressions").notNull().default(0),
+  conversions: integer("conversions").notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.date, t.partner, t.source, t.subsource] })]);
+
+// Per-day Meta spend + leads at source/subsource grain.
+export const mffDailySpend = pgTable("mff_daily_spend", {
+  date: date("date").notNull(),
+  source: text("source").notNull().default(""),
+  subsource: text("subsource").notNull().default(""),
+  spend: decimal("spend", { precision: 14, scale: 2 }).notNull().default("0"),
+  leads: integer("leads").notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.date, t.source, t.subsource] })]);
+
+// Cumulative hourly snapshots — used to reconstruct Rokt RPM by hour of day.
+export const mffHourlySnapshot = pgTable("mff_hourly_snapshot", {
+  id: serial("id").primaryKey(),
+  capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
+  date: date("date").notNull(),
+  leads: integer("leads").notNull().default(0),
+  roktImpressions: integer("rokt_impressions").notNull().default(0),
+  roktRevenue: decimal("rokt_revenue", { precision: 14, scale: 2 }).notNull().default("0"),
+}, (t) => [index("mff_hourly_snapshot_date_idx").on(t.date, t.capturedAt)]);
+
+// Pipeline run log — one row per MFF ingest run.
+export const mffRunLog = pgTable("mff_run_log", {
+  id: serial("id").primaryKey(),
+  runType: text("run_type").notNull(),
+  runDate: date("run_date"),
+  status: text("status").notNull(),
+  sources: text("sources"),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  notes: text("notes"),
 });
 
 // MMM select types (Node reads only; Python owns writes)
