@@ -5,10 +5,14 @@ Used for:
   - Daily: Google+Agency and Taboola spend
   - Backfill: IO CTO, IO Co-Reg, Zenect (since scrapers can't pull historical dates)
 
-Sheet columns (May 2026 tab):
-  A=Date, D=Cost Google, E=Cost+Agency, G=Cost(Taboola)
-  I=Cost(Meta), K=Rev(Interactive CTO), L=Rev(TMG/IMS),
-  M=Rev(AfterOffers), N=Rev(Zenect/Betwext), O=Rev(Interactive/Co-Reg)
+Sheet columns (current monthly tab layout, verified Aug 2026):
+  A=Date  B=Total Leads  C=Leads G  D=Cost G  F=Cost G(BF)
+  G=Google Cost+Agency  H=Leads(taboola)  I=Cost(Taboola)  K=Cost(Meta)
+  O=Rev(Interactive CTO)  P=Rev(TMG/IMS)  Q=Rev(AfterOffers)
+  R=Rev(Zenect/Betwext)  S=Rev(Interactive/Co-Reg)
+Google spend = D (Cost G) + G (Google Cost+Agency); tab names vary
+(long "July 2026" vs short "Aug 2026") so run_daily validates the fetched
+tab actually contains the target date before trusting it.
 """
 
 import csv
@@ -67,13 +71,16 @@ def pull_sheet_data(target_date=None, sheet_content=None):
         reader = csv.reader(io.StringIO(sheet_content))
         rows = list(reader)
 
-        # Find header row and map columns
+        # Find header row and map columns. Defaults match the CURRENT monthly-tab
+        # layout (25 cols): 0=Date 1=Total Leads 2=Leads G 3=Cost G 5=Cost G(BF)
+        # 6=Google Cost+Agency 7=Leads(taboola) 8=Cost(Taboola) 14=Rev(Interactive
+        # CTO) 15=Rev(TMG) 16=Rev(AfterOffers) 17=Rev(Zenect) 18=Rev(Interactive).
         col = {
-            "total_leads": 1, "leads_google": 2, "leads_taboola": 5, "leads_meta": 7,
-            "google": 4, "taboola": 6,
-            "io_cto": 10, "ims": 11, "afteroffers": 12,
-            "zenect": 13, "io_coreg": 14,
-            "rpl": 17, "cpl": 18,
+            "total_leads": 1, "leads_google": 2, "leads_taboola": 7, "leads_meta": 9,
+            "google_raw": 3, "google_agency": 6, "taboola": 8,
+            "io_cto": 14, "ims": 15, "afteroffers": 16,
+            "zenect": 17, "io_coreg": 18,
+            "rpl": 21, "cpl": 22,
         }
 
         for i, row in enumerate(rows):
@@ -81,10 +88,11 @@ def pull_sheet_data(target_date=None, sheet_content=None):
             if any("cost + agency" in c for c in rl):
                 for j, h in enumerate(rl):
                     if "total leads" in h:                             col["total_leads"] = j
-                    elif "leads google" in h or h == "leads google":   col["leads_google"]  = j
+                    elif "leads google" in h or h == "leads g":        col["leads_google"]  = j
                     elif "leads (taboola)" in h or "leads taboola" in h: col["leads_taboola"] = j
                     elif "leads meta" in h or h == "leads meta":       col["leads_meta"]    = j
-                    elif "cost + agency" in h:                          col["google"]      = j
+                    elif h == "cost g":                                col["google_raw"]  = j
+                    elif "cost + agency" in h:                          col["google_agency"] = j
                     elif "cost (taboola)" in h:                         col["taboola"]     = j
                     elif "interactive cto" in h:                        col["io_cto"]      = j
                     elif "tmg" in h or (("ims" in h or "rev (t" in h) and "interactive" not in h): col["ims"] = j
@@ -112,7 +120,11 @@ def pull_sheet_data(target_date=None, sheet_content=None):
                     "leads_google":  int(parse_currency(row[col["leads_google"]])) if col.get("leads_google", -1) < len(row) and col.get("leads_google", -1) >= 0 else 0,
                     "leads_taboola": int(parse_currency(row[col["leads_taboola"]])) if col.get("leads_taboola", -1) < len(row) and col.get("leads_taboola", -1) >= 0 else 0,
                     "leads_meta":    int(parse_currency(row[col["leads_meta"]])) if col.get("leads_meta", -1) < len(row) and col.get("leads_meta", -1) >= 0 else 0,
-                    "google_spend":  get("google"),
+                    # Total Google = raw Google spend (Cost G) + the agency-marked-up
+                    # line (Google Cost+Agency, applied to the BF sub-column). Mike's
+                    # own "Total UA Cost" sums both, and which column he fills varies
+                    # month to month, so summing them is the robust, no-double-count total.
+                    "google_spend":  get("google_raw") + get("google_agency"),
                     "taboola_spend": get("taboola"),
                     "io_cto":        get("io_cto"),
                     "io_coreg":      get("io_coreg"),

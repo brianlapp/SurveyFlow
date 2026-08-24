@@ -64,14 +64,24 @@ def run(target_date=None):
         import requests as req
         target_dt = datetime.strptime(target_date, "%Y-%m-%d")
         sheet_content = None
+        # gviz SILENTLY returns the first tab when the requested tab name does not
+        # exist, so "content is non-empty" is NOT proof we got the right tab. We
+        # must confirm the fetched CSV actually contains the target date. Mike names
+        # tabs inconsistently ("July 2026" vs "Aug 2026"), so try long AND short
+        # month forms and accept the first tab whose content holds the date row.
+        date_token = f"{target_dt.month}/{target_dt.day}/{target_dt.year}"  # e.g. 8/13/2026
         for tab_name in [target_dt.strftime("%B %Y"), target_dt.strftime("%b %Y")]:
             url = (f"https://docs.google.com/spreadsheets/d/{GOOGLE_SPREADSHEET_ID}"
                    f"/gviz/tq?tqx=out:csv&sheet={tab_name.replace(' ', '%20')}")
             r = req.get(url, timeout=15)
-            if r.ok and len(r.text) > 100:
+            if not r.ok or len(r.text) <= 100:
+                continue
+            if date_token in r.text:
                 sheet_content = r.text
                 log(f"  Sheet tab '{tab_name}' fetched ({len(sheet_content)} chars)")
                 break
+            log(f"  Sheet tab '{tab_name}' fetched but missing {date_token} "
+                f"(wrong/fallback tab) — trying next name")
         if sheet_content:
             sheets_result = pull_sheet_data(target_date=target_date, sheet_content=sheet_content)
             if sheets_result.get("google_spend", 0) > 0 or sheets_result.get("taboola_spend", 0) > 0:
