@@ -659,9 +659,12 @@ def get_meta_creative_deep_dive(as_of_date=None):
                 "impressions": int(imps),
                 "link_clicks": int(lc),
                 "signups":     int(signups),
-                "cpm":         round((spend / imps * 1000), 2) if imps > 0 else 0,
-                "ctr":         round((lc / imps * 100), 4)     if imps > 0 else 0,
-                "conv_rate":   round((signups / lc * 100), 4)  if lc > 0 else 0,
+                # float() every operand: SUM() over numeric columns returns Decimal,
+                # and round(Decimal) stays Decimal — which later blows up pct_change
+                # when it meets a float (float - Decimal is a TypeError).
+                "cpm":         round(float(spend) / imps * 1000, 2) if imps > 0 else 0.0,
+                "ctr":         round(float(lc) / imps * 100, 4)     if imps > 0 else 0.0,
+                "conv_rate":   round(float(signups) / lc * 100, 4)  if lc > 0 else 0.0,
             }
         return rows
 
@@ -677,6 +680,7 @@ def get_meta_creative_deep_dive(as_of_date=None):
 
     def pct_change(new_val, old_val):
         if old_val and old_val != 0:
+            new_val, old_val = float(new_val), float(old_val)
             return round((new_val - old_val) / abs(old_val) * 100, 1)
         return None
 
