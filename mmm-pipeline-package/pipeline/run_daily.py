@@ -70,7 +70,20 @@ def run(target_date=None):
         # tabs inconsistently ("July 2026" vs "Aug 2026"), so try long AND short
         # month forms and accept the first tab whose content holds the date row.
         date_token = f"{target_dt.month}/{target_dt.day}/{target_dt.year}"  # e.g. 8/13/2026
-        for tab_name in [target_dt.strftime("%B %Y"), target_dt.strftime("%b %Y")]:
+        # Candidate tab names, most-specific first. Mike names tabs inconsistently
+        # ("July 2026" vs "Aug 2026" vs "Sept 2026" — note the 4-letter "Sept"),
+        # so try long/short/4-letter month forms, year-qualified then bare. The
+        # date_token check below rejects a wrong/fallback tab, so extra candidates
+        # are safe — the first tab actually CONTAINING the date row wins.
+        tab_candidates = [target_dt.strftime("%B %Y"), target_dt.strftime("%b %Y")]
+        if target_dt.month == 9:
+            tab_candidates.append(f"Sept {target_dt.year}")
+        tab_candidates += [target_dt.strftime("%B"), target_dt.strftime("%b")]
+        if target_dt.month == 9:
+            tab_candidates.append("Sept")
+        _seen = set()
+        tab_candidates = [t for t in tab_candidates if not (t in _seen or _seen.add(t))]
+        for tab_name in tab_candidates:
             url = (f"https://docs.google.com/spreadsheets/d/{GOOGLE_SPREADSHEET_ID}"
                    f"/gviz/tq?tqx=out:csv&sheet={tab_name.replace(' ', '%20')}")
             r = req.get(url, timeout=15)
