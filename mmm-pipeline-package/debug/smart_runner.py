@@ -65,7 +65,15 @@ def fetch_sheet_spend(target_date):
     """
     dt = datetime.strptime(target_date, "%Y-%m-%d")
 
-    for tab_name in [dt.strftime("%b %Y"), dt.strftime("%B %Y")]:
+    # Mike names month tabs inconsistently, incl. the 4-letter "Sept" — try
+    # long/short/4-letter, year-qualified then bare (see run_daily.py).
+    _tabs = [dt.strftime("%b %Y"), dt.strftime("%B %Y")]
+    if dt.month == 9:
+        _tabs += [f"Sept {dt.year}", "Sept"]
+    _tabs += [dt.strftime("%B"), dt.strftime("%b")]
+    _seen = set()
+    _tabs = [t for t in _tabs if not (t in _seen or _seen.add(t))]
+    for tab_name in _tabs:
         try:
             url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={tab_name.replace(' ', '%20')}"
             r = requests.get(url, timeout=15)
