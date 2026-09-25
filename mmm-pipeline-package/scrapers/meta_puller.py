@@ -26,6 +26,21 @@ def name_to_compound_key(ad_name):
     return None
 
 
+MMM_CAMPAIGN_MARKERS = ("mrktmunch", "mmm")
+
+
+def is_mmm_campaign(campaign_name):
+    name = (campaign_name or "").lower()
+    return any(m in name for m in MMM_CAMPAIGN_MARKERS)
+
+
+def fill_meta_macros(value, insight):
+    if not value:
+        return value
+    return (value.replace("{{campaign.id}}", insight.get("campaign_id", ""))
+                 .replace("{{ad.id}}", insight.get("ad_id", "")))
+
+
 def get_yesterday():
     d = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     return d, d
@@ -133,10 +148,12 @@ def pull_meta_spend(credentials, date_start=None, date_stop=None):
         url = next_url
         p = {}  # next URL already has all params embedded
 
-    # Filter to only MrktMunch campaigns (case-insensitive)
+    # Filter to MarketMunchies campaigns (case-insensitive). Two naming styles run
+    # in this account: "MrktMunch-Lead-..." and Uros's "Uros - MMM - ..." (both land
+    # on modemarketmunchies.com). Missing the second dropped ~27% of MMM spend.
     all_count = len(insights)
-    insights = [i for i in insights if "mrktmunch" in (i.get("campaign_name") or "").lower()]
-    print(f"  Filtered to MrktMunch campaigns: {len(insights)}/{all_count} insights")
+    insights = [i for i in insights if is_mmm_campaign(i.get("campaign_name"))]
+    print(f"  Filtered to MMM campaigns: {len(insights)}/{all_count} insights")
 
     # Step 3: Fetch creative details ONLY for active MrktMunch ads (not all 347)
     # Targeted fetch of ~44 ads is far more reliable than bulk fetch of 347
@@ -231,11 +248,23 @@ def pull_meta_spend(credentials, date_start=None, date_stop=None):
         url = ad_urls.get(ad_id)
         aff_id, aff_sub, compound_key = parse_tracking_params(url)
 
+        # Meta fills {{campaign.id}}/{{ad.id}} macros at click time; mirror that
+        # so the spend key matches what the lander actually receives.
+        if compound_key and "{{" in compound_key:
+            compound_key = fill_meta_macros(compound_key, insight)
+            aff_sub = fill_meta_macros(aff_sub, insight)
+
         # Fall back to ad name when URL tracking params unavailable
         if not compound_key:
             compound_key = name_to_compound_key(insight.get("ad_name", ""))
             aff_id = "meta"
             aff_sub = compound_key.replace("meta-", "") if compound_key else None
+
+        # Last resort: untagged ads (e.g. Uros's bare-URL ads) still cost money.
+        # Key them by ad id so their spend counts instead of being dropped.
+        if not compound_key and ad_id:
+            compound_key = f"meta-{ad_id}"
+            aff_id, aff_sub = "meta", ad_id
 
         row = {
             "date": date_start,
