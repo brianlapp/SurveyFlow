@@ -115,3 +115,16 @@ Preferred communication style: Simple, everyday language.
 - **Drizzle Kit**: Database migrations and schema management
 - **ESBuild**: Fast JavaScript bundling for production builds
 - **TypeScript**: Type safety across frontend, backend, and shared schemas
+
+## ⚠️ Publish wants to DROP tables? Never approve — mirror first
+The report Neon (production) holds tables our dashboards create directly (hub:
+`lander_daily`, `ad_lander_map`, `lander_registry`, `mainframe_lander_*`; MFF:
+`mff_ad_creative`, …). Replit's Publish diffs the dev DB against production and
+offers to DROP anything dev lacks. Fix: copy production's STRUCTURE (no data)
+into dev, then Publish:
+
+    python3 mmm-pipeline-package/scripts/mirror_prod_schema_to_dev.py
+
+It also runs automatically at the start of `npm run dev` (workspace Run), so a
+restarted workspace is always in sync. Read-only on production, additive-only
+on dev, refuses to run if DATABASE_URL is production.
