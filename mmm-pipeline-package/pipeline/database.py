@@ -45,11 +45,13 @@ def init_db():
 
 
 def clear_date(date):
-    """Remove all rows for a given date so we can re-insert cleanly."""
+    """Remove all rows for a given date so we can re-insert cleanly.
+    TikTok rows are written by the Netlify report's refresh job (not this
+    pipeline), so they are kept — otherwise every run would wipe them."""
     conn = get_connection()
     try:
         with conn.cursor() as c:
-            c.execute("DELETE FROM mmm_ad_spend    WHERE date = %s", (date,))
+            c.execute("DELETE FROM mmm_ad_spend    WHERE date = %s AND platform <> 'TikTok'", (date,))
             c.execute("DELETE FROM mmm_ims_revenue WHERE date = %s", (date,))
             c.execute("DELETE FROM mmm_ao_revenue  WHERE date = %s", (date,))
         conn.commit()
