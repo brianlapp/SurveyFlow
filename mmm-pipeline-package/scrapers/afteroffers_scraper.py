@@ -24,6 +24,12 @@ def get_yesterday_range():
     return yesterday.strftime("%Y-%m-%d"), yesterday.strftime("%m/%d/%Y")
 
 
+def et_offset_hours(iso_date):
+    """Eastern offset from GMT on that date: -5 (EST) or -4 (EDT)."""
+    noon = datetime.strptime(iso_date, "%Y-%m-%d").replace(hour=12, tzinfo=EST)
+    return int(noon.utcoffset().total_seconds() // 3600)
+
+
 def build_compound_key(utm_source, utm_medium):
     if utm_source and utm_medium:
         return f"{utm_source}-{utm_medium}"
@@ -79,31 +85,15 @@ def pull_afteroffers_revenue(credentials, target_date=None):
                     if is_mmm:
                         print(f"  AfterOffers: Selected host: {txt}")
 
-            # Set timezone to EST (America/New_York) to match all other sources
-            tz_sel = page.query_selector("select[name='timezone']")
-            if not tz_sel:
-                tz_sel = page.query_selector("select[name='tz']")
-            if tz_sel:
-                # Try common EST option values
-                for est_val in ["America/New_York", "EST", "US/Eastern", "-5", "Eastern Time"]:
-                    try:
-                        tz_sel.select_option(est_val)
-                        print(f"  AfterOffers: Timezone set to EST ({est_val})")
-                        break
-                    except Exception:
-                        continue
-                else:
-                    # Fallback: iterate options looking for EST/New_York
-                    for opt in tz_sel.query_selector_all("option"):
-                        txt = opt.inner_text().strip()
-                        val = opt.get_attribute("value") or ""
-                        if any(k in txt.lower() or k in val.lower()
-                               for k in ["new_york", "eastern", "est", "america/new"]):
-                            opt.evaluate("el => el.selected = true")
-                            print(f"  AfterOffers: Timezone set to: {txt}")
-                            break
+            # The report defaults to "Offset from GMT: 0", which books evenings
+            # after 7/8pm Eastern to the next day. Pick the Eastern offset for
+            # the target date (-5 EST / -4 EDT) so days match every other source.
+            offset = et_offset_hours(iso_date)
+            if page.query_selector("select[name='offset']"):
+                page.select_option("select[name='offset']", str(offset))
+                print(f"  AfterOffers: Offset from GMT set to {offset} (Eastern)")
             else:
-                print("  AfterOffers: No timezone selector found — using account default")
+                print("  AfterOffers: WARNING no 'offset' selector — days will be booked in GMT")
 
             # Set date range
             page.fill("input[name='from']", date_display)
