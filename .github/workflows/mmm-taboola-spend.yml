@@ -20,7 +20,11 @@ name: MMM Taboola Spend
 on:
   schedule:
     - cron: "45 13 * * *"   # 13:45 UTC ~= 9:45am ET, after MMM Daily Finalize (13:17)
-  workflow_dispatch: {}      # manual run for testing / re-runs
+  workflow_dispatch:         # manual run for testing / re-runs / backfills
+    inputs:
+      days:
+        description: "How many days back to re-pull (default 4)"
+        default: "4"
 
 concurrency:
   group: mmm-taboola-spend
@@ -36,9 +40,10 @@ jobs:
       TABOOLA_CLIENT_ID: ${{ secrets.TABOOLA_CLIENT_ID }}
       TABOOLA_CLIENT_SECRET: ${{ secrets.TABOOLA_CLIENT_SECRET }}
       NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      DAYS: ${{ inputs.days || '4' }}
     steps:
       - name: Install psycopg2
-        run: pip install --quiet "psycopg2-binary==2.9.9"
+        run: pip install --quiet "psycopg2-binary==2.9.13"   # 2.9.9 has no Python 3.14 build (runner default since 10/23)
 
       - name: Pull Taboola spend -> report DB
         run: |
@@ -66,9 +71,9 @@ jobs:
                       {"client_id": cid, "client_secret": sec,
                        "grant_type": "client_credentials"})["access_token"]
 
-          # Last 4 days (self-healing against late revisions + gaps)
+          # Last DAYS days (default 4: self-healing against late revisions + gaps)
           today = datetime.date.today()
-          days = [(today - datetime.timedelta(days=i)).isoformat() for i in range(1, 5)]
+          days = [(today - datetime.timedelta(days=i)).isoformat() for i in range(1, int(os.environ.get("DAYS") or 4) + 1)]
 
           rows = {}
           for d in days:
