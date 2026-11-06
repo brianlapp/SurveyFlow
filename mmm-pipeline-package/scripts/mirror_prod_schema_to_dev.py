@@ -11,8 +11,10 @@ so Publish has nothing to drop.
 Safety:
   * Reads production only (read-only session). Never writes to production.
   * Copies STRUCTURE only — tables, columns, defaults, keys, indexes. No rows.
-  * Additive only on dev: creates missing tables / adds missing columns. Never
-    drops or alters anything that already exists.
+  * On dev: creates missing tables / adds missing columns. The only things it
+    changes on an existing dev table are its primary key and its id sequences'
+    type, set to production's, because Publish diffs those too (11/6: dev's old
+    ad_lander_map key made Publish try to put it back on production).
   * Refuses to run if dev and production are the same database.
 
 Usage (Replit Shell, from the repo root):
@@ -104,6 +106,15 @@ def indexes(cur, table):
     return [re.sub(r"^CREATE (UNIQUE )?INDEX ", r"CREATE \1INDEX IF NOT EXISTS ", r[0]) for r in cur.fetchall()]
 
 
+def seq_types(cur):
+    cur.execute("select sequencename, data_type from pg_sequences where schemaname=%s", (SCHEMA,))
+    return dict(cur.fetchall())
+
+
+def primary_key(cur, table):
+    return next(((n, d) for n, k, d in constraints(cur, table) if k == "p"), None)
+
+
 def main():
     dry = "--dry-run" in sys.argv
     prod_url = os.environ.get("NEON_DATABASE_URL")
@@ -148,6 +159,17 @@ def main():
                     f"alter table {q(t)} add column if not exists "
                     + column_sql(name, typ, safe_notnull, default, identity)
                 )
+
+        pk, dev_pk = primary_key(pc, t), primary_key(dc, t)
+        if pk and (dev_pk is None or dev_pk[1] != pk[1]):
+            if dev_pk:
+                stmts.append(f"alter table {q(t)} drop constraint {q(dev_pk[0])}")
+            stmts.append(f"alter table {q(t)} add constraint {q(pk[0])} {pk[1]}")
+
+    dev_seqs = seq_types(dc)
+    for seq, typ in sorted(seq_types(pc).items()):
+        if seq in dev_seqs and dev_seqs[seq] != typ:
+            stmts.append(f"alter sequence {q(seq)} as {typ}")
 
     stmts.extend(deferred_fks)
 
