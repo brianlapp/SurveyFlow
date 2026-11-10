@@ -100,7 +100,7 @@ def run():
     # --- Zenect (Today mode) ---
     log("Pulling Zenect (today)...")
     try:
-        zenect_result = pull_zenect(creds, target_date=today, intraday=True)
+        zenect_result = pull_zenect(creds, target_date=today)
         log(f"  Zenect: {zenect_result.get('good_leads',0)} leads  ${zenect_result.get('revenue',0):.2f}")
     except Exception as e:
         log(f"  Zenect FAILED: {e}"); errors.append(f"zenect: {e}")
